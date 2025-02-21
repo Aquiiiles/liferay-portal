@@ -3591,6 +3591,14 @@
 	},
 	{
 		"classNames": [
+			"CPAttachmentFileEntryLocalServiceUtil"
+		],
+		"from": "fetchByExternalReferenceCode",
+		"issueKey": "LPD-48708",
+		"to": "fetchCPAttachmentFileEntryByExternalReferenceCode"
+	},
+	{
+		"classNames": [
 			"CPAttachmentFileEntryService",
 			"CPAttachmentFileEntryServiceUtil"
 		],
