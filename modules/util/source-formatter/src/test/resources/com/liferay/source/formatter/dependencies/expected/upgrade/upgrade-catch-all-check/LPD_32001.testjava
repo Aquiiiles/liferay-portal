@@ -1,0 +1,25 @@
+/**
+ * SPDX-FileCopyrightText: (c) 2024 Liferay, Inc. https://liferay.com
+ * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
+ */
+
+package com.liferay.source.formatter.dependencies.upgrade;
+
+import com.liferay.mail.kernel.service.MailServiceUtil;
+
+import com.liferay.mail.kernel.model.MailMessage;
+
+/**
+ * @author Aquiles Duarte
+ */
+public class LPD_32001 {
+
+	public void method(
+		InternetAddress from, InternetAddress to, String subject, String body,
+		boolean htmlFormat) {
+
+		MailServiceUtil.sendEmail(
+			new MailMessage(emailFromAddress, to, test123, test123, true));
+	}
+
+}
