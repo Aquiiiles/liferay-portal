@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {Locator, Page} from '@playwright/test';
+import {FrameLocator, Locator, Page} from '@playwright/test';
 
 import {ViewObjectDefinitionsPage} from '../ViewObjectDefinitionsPage';
 
@@ -13,8 +13,12 @@ export class ObjectViewPage {
 	readonly objectViewNameSaveModalButton: Locator;
 	readonly viewsTabItem: Locator;
 	readonly viewObjectDefinitionsPage: ViewObjectDefinitionsPage;
+	readonly page: Page;
+	readonly iframe: FrameLocator;
 
 	constructor(page: Page) {
+		this.iframe = page.frameLocator('iframe');
+		this.page = page;
 		this.addObjectViewButton = page.getByTitle('Add Object View');
 		this.objectViewNameModalInput = page.getByLabel('Name' + 'Mandatory');
 		this.objectViewNameSaveModalButton = page.getByRole('button', {
@@ -41,4 +45,14 @@ export class ObjectViewPage {
 
 		await this.viewsTabItem.click();
 	}
+
+	async gotoTab(tabname: string) {
+		await this.page
+			.frameLocator('iframe')
+			.getByRole('tab')
+			.filter({hasText: tabname})
+			.click();
+	}
+
+	async;
 }

@@ -256,3 +256,64 @@ test('assert that the user is able to use the ERC field in Sort, on the Custom V
 
 	await expect(page.getByRole('cell').nth(2)).toHaveText(entry2);
 });
+
+test('can create an object view column and it still stays in order', async ({
+	apiHelpers,
+	objectViewPage,
+	page,
+}) => {
+	const objectDefinition =
+		await apiHelpers.objectAdmin.postRandomObjectDefinition({
+			objectFolderExternalReferenceCode: 'default',
+			status: {code: 0},
+		});
+
+	apiHelpers.data.push({id: objectDefinition.id, type: 'objectDefinition'});
+
+	const objectViewAPIClient = await apiHelpers.buildRestClient(ObjectViewAPI);
+
+	await objectViewAPIClient.postObjectDefinitionObjectView(
+		objectDefinition.id,
+		{
+			defaultObjectView: true,
+			name: {en_US: getRandomString()},
+			objectViewColumns: [
+				{
+					objectFieldName: 'externalReferenceCode',
+					priority: 0,
+				},
+				{
+					objectFieldName: 'status',
+					priority: 1,
+				},
+				{
+					objectFieldName: 'createDate',
+					priority: 2,
+				},
+			],
+		}
+	);
+
+	await objectViewPage.goto(objectDefinition.label['en_US']);
+
+	await page.getByRole('cell').nth(1).getByRole('link').click();
+
+	await objectViewPage.gotoTab('View Builder');
+
+	await objectViewPage.iframe.getByLabel('add').last().click();
+
+	await objectViewPage.page.getByLabel('Author').click();
+
+	await objectViewPage.page.getByRole('button', {name: 'Save'}).click();
+
+	const fieldLabels = await objectViewPage.iframe
+		.locator('.list-group-item .list-group-title')
+		.allTextContents();
+
+	expect(fieldLabels).toEqual([
+		'External Reference Code',
+		'Status',
+		'Create Date',
+		'Author',
+	]);
+});
