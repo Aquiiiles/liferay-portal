@@ -568,7 +568,7 @@ function appendXMLTransitions(buffer, transitions) {
 
 			buffer.push(xmlLabels.close);
 
-			buffer.push(createTagWithEscapedContent('name', item.id));
+			buffer.push(createTagWithEscapedContent('name', item.data.name));
 
 			buffer.push(
 				createTagWithEscapedContent('target', item.target),
@@ -626,7 +626,7 @@ function serializeDefinition(xmlNamespace, metadata, nodes, transitions) {
 	nodes?.forEach((item) => {
 		const description = item.data?.description;
 		const initial = item.type === 'start';
-		const name = item.id;
+		const name = item.data?.name || item.id;
 		const script = item.data?.script;
 		const scriptLanguage = item.data?.scriptLanguage;
 		let xmlType = item.type;

@@ -28,7 +28,7 @@ DeserializeUtil.prototype = {
 
 		const elements = [];
 
-		const transitionsNames = [];
+		const transitionsIds = [];
 
 		const nodesNames = [];
 
@@ -163,27 +163,23 @@ DeserializeUtil.prototype = {
 							label = {[defaultLanguageId]: transition.name};
 						}
 
-						let transitionName;
+						let transitionId;
 
-						if (transition.id) {
-							transitionName = transition.id;
-						}
-						else if (transition.name) {
-							transitionName = transition.name;
+						if (transition.name) {
+							transitionId = transition.name;
 						}
 						else {
 							return;
 						}
 
 						if (
-							transitionsNames.includes(transitionName) ||
-							nodesNames.includes(transitionName)
+							transitionsIds.includes(transitionId) ||
+							nodesNames.includes(transition.name)
 						) {
-							transitionName = `${nodeName}_${transitionName}_${transition.target}`;
+							transitionId = `${nodeName}_${transitionId}_${transition.target}`;
 						}
-						else {
-							transitionsNames.push(transitionName);
-						}
+							transitionsIds.push(transitionId);
+						
 						const defaultEdge =
 							transition?.default === 'true' || !hasDefaultEdge
 								? true
@@ -194,13 +190,13 @@ DeserializeUtil.prototype = {
 							data: {
 								defaultEdge,
 								label,
+								name: transition.name
 							},
-							id: transitionName,
+							id: transitionId,
 							source: nodeName,
 							target: transition.target,
 							type: 'transition',
 						});
-
 						if (defaultEdge && !hasDefaultEdge) {
 							hasDefaultEdge = true;
 						}
