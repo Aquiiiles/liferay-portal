@@ -178,8 +178,8 @@ DeserializeUtil.prototype = {
 						) {
 							transitionId = `${nodeName}_${transitionId}_${transition.target}`;
 						}
-							transitionsIds.push(transitionId);
-						
+						transitionsIds.push(transitionId);
+
 						const defaultEdge =
 							transition?.default === 'true' || !hasDefaultEdge
 								? true
@@ -190,7 +190,7 @@ DeserializeUtil.prototype = {
 							data: {
 								defaultEdge,
 								label,
-								name: transition.name
+								name: transition.name,
 							},
 							id: transitionId,
 							source: nodeName,

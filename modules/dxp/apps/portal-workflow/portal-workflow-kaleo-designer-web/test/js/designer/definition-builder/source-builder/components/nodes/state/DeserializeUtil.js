@@ -6,31 +6,41 @@
 import DeserializeUtil from '../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/deserializeUtil';
 const XMLDefinition = require('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/xmlDefinition');
 
-jest.mock('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/xmlDefinition', () => {
-	return jest.fn().mockImplementation(({value}) => ({
-		forEachField: jest.fn(),
-		getDefinitionMetadata: jest.fn(() => ({foo: 'bar'})),
-		value,
-	}));
-});
+jest.mock(
+	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/xmlDefinition',
+	() => {
+		return jest.fn().mockImplementation(({value}) => ({
+			forEachField: jest.fn(),
+			getDefinitionMetadata: jest.fn(() => ({foo: 'bar'})),
+			value,
+		}));
+	}
+);
 
-jest.mock('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/utils', () => ({
-	parseActions: jest.fn(() => 'parsedActions'),
-	parseAssignments: jest.fn(() => 'parsedAssignments'),
-	parseNotifications: jest.fn(() => 'parsedNotifications'),
-	parseTimers: jest.fn(() => 'parsedTimers'),
-}));
+jest.mock(
+	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/utils',
+	() => ({
+		parseActions: jest.fn(() => 'parsedActions'),
+		parseAssignments: jest.fn(() => 'parsedAssignments'),
+		parseNotifications: jest.fn(() => 'parsedNotifications'),
+		parseTimers: jest.fn(() => 'parsedTimers'),
+	})
+);
 
-jest.mock('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/util/utils', () => ({
-  removeNewLine: jest.fn((v) => v),
-  replaceTabSpaces: jest.fn((v) => v),
-}));
+jest.mock(
+	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/util/utils',
+	() => ({
+		removeNewLine: jest.fn((v) => v),
+		replaceTabSpaces: jest.fn((v) => v),
+	})
+);
 
-jest.mock('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/constants', () => ({
-	DEFAULT_LANGUAGE: 'groovy',
-}));
-
-
+jest.mock(
+	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/constants',
+	() => ({
+		DEFAULT_LANGUAGE: 'groovy',
+	})
+);
 
 describe('DeserializeUtil', () => {
 	beforeEach(() => {

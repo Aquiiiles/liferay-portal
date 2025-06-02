@@ -3,14 +3,16 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-const {serializeDefinition} = require(
-	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/serializeUtil'
-);
+const {
+	serializeDefinition,
+} = require('../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/serializeUtil');
 
 jest.mock(
 	'../../../../../../../../src/main/resources/META-INF/resources/designer/js/definition-builder/source-builder/utils/xmlHelpers',
 	() => ({
-		createTagWithEscapedContent: jest.fn((tag, content) => `<${tag}>${content}</${tag}>`),
+		createTagWithEscapedContent: jest.fn(
+			(tag, content) => `<${tag}>${content}</${tag}>`
+		),
 	})
 );
 
@@ -25,7 +27,6 @@ jest.mock(
 		format: jest.fn((buffer) => buffer.join('')),
 	})
 );
-
 
 global.Liferay = {
 	Util: {
@@ -50,7 +51,7 @@ describe('serializeDefinition', () => {
 						userId: ['1'],
 					},
 					description: 'desc',
-				id: 'fromId',
+					id: 'fromId',
 					label: {en_US: 'Label'},
 					name: 'fromDataName',
 					taskTimers: [],
