@@ -47,7 +47,13 @@ public interface ObjectFieldBusinessType {
 
 	public String getDDMFormFieldTypeName();
 
-	public default String getDDMFormFieldTypeName(boolean localized) {
+	public default String getDDMFormFieldTypeName(
+		boolean localized, ObjectField objectField) {
+
+		return getDDMFormFieldTypeName(objectField);
+	}
+
+	public default String getDDMFormFieldTypeName(ObjectField objectField) {
 		return getDDMFormFieldTypeName();
 	}
 
