@@ -52,7 +52,9 @@ public class TextObjectFieldBusinessType extends BaseObjectFieldBusinessType {
 	}
 
 	@Override
-	public String getDDMFormFieldTypeName(boolean localized) {
+	public String getDDMFormFieldTypeName(
+		boolean localized, ObjectField objectField) {
+
 		if (localized) {
 			return DDMFormFieldTypeConstants.LOCALIZABLE_TEXT;
 		}

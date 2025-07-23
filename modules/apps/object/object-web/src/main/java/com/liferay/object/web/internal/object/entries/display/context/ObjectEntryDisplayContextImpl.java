@@ -1089,8 +1089,7 @@ public class ObjectEntryDisplayContextImpl
 
 		DDMFormField ddmFormField = new DDMFormField(
 			objectField.getName(),
-			objectFieldBusinessType.getDDMFormFieldTypeName(
-				objectField.isLocalized()));
+			objectFieldBusinessType.getDDMFormFieldTypeName(objectField));
 
 		if (!readOnly) {
 			readOnly = ObjectFieldUtil.isReadOnly(
