@@ -893,21 +893,35 @@ public abstract class BaseListTypeDefinitionResourceTestCase {
 
 		ListTypeDefinition listTypeDefinition1 = randomListTypeDefinition();
 
+		Page<ListTypeDefinition> page =
+			listTypeDefinitionResource.getListTypeDefinitionsPage(
+				null, null,
+				null,
+				Pagination.of(1, 2), null);
+
+		System.out.println("related: " + page.getItems());
+
+		_log.info("related: "+ page.getItems());
+
 		listTypeDefinition1 =
 			testGetListTypeDefinitionsPage_addListTypeDefinition(
 				listTypeDefinition1);
 
 		for (EntityField entityField : entityFields) {
-			Page<ListTypeDefinition> page =
+			Page<ListTypeDefinition> page2 =
 				listTypeDefinitionResource.getListTypeDefinitionsPage(
 					null, null,
 					getFilterString(
 						entityField, "between", listTypeDefinition1),
 					Pagination.of(1, 2), null);
 
+			System.out.println("related: " + page2.getItems());
+
+			_log.info("related: "+ page2.getItems());
+
 			assertEquals(
 				Collections.singletonList(listTypeDefinition1),
-				(List<ListTypeDefinition>)page.getItems());
+				(List<ListTypeDefinition>)page2.getItems());
 		}
 	}
 
