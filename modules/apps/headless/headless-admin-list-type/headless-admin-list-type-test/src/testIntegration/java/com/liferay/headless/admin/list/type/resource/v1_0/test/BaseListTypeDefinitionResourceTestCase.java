@@ -891,23 +891,41 @@ public abstract class BaseListTypeDefinitionResourceTestCase {
 			return;
 		}
 
+		Thread.sleep(1000);
+
 		ListTypeDefinition listTypeDefinition1 = randomListTypeDefinition();
+
+		Page<ListTypeDefinition> page =
+			listTypeDefinitionResource.getListTypeDefinitionsPage(
+				null, null,
+				null,
+				Pagination.of(1, 2), null);
+
+		System.out.println("related: " + page.getItems());
+
+		_log.error("antes DO INSERT: " +
+				   JSONFactoryUtil.looseSerializeDeep(page.getItems()));
 
 		listTypeDefinition1 =
 			testGetListTypeDefinitionsPage_addListTypeDefinition(
 				listTypeDefinition1);
 
 		for (EntityField entityField : entityFields) {
-			Page<ListTypeDefinition> page =
+			Page<ListTypeDefinition> page2 =
 				listTypeDefinitionResource.getListTypeDefinitionsPage(
 					null, null,
 					getFilterString(
 						entityField, "between", listTypeDefinition1),
 					Pagination.of(1, 2), null);
 
+			System.out.println("related: " + page2.getItems());
+
+			_log.error("DEPOIS DO INSERT: " +
+					   JSONFactoryUtil.looseSerializeDeep(page2.getItems()));
+
 			assertEquals(
 				Collections.singletonList(listTypeDefinition1),
-				(List<ListTypeDefinition>)page.getItems());
+				(List<ListTypeDefinition>)page2.getItems());
 		}
 	}
 
@@ -2311,10 +2329,13 @@ public abstract class BaseListTypeDefinitionResourceTestCase {
 	}
 
 	protected ListTypeDefinition randomListTypeDefinition() throws Exception {
+		Long uniqueMillis = System.currentTimeMillis();
+		Date uniqueTime = new Date(uniqueMillis);
+
 		return new ListTypeDefinition() {
 			{
-				dateCreated = RandomTestUtil.nextDate();
-				dateModified = RandomTestUtil.nextDate();
+				dateCreated = uniqueTime;
+				dateModified = uniqueTime;
 				defaultLanguageId = StringUtil.toLowerCase(
 					RandomTestUtil.randomString());
 				externalReferenceCode = StringUtil.toLowerCase(
