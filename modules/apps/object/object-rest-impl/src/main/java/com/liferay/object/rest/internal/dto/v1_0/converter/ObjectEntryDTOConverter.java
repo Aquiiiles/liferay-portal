@@ -1302,8 +1302,17 @@ public class ObjectEntryDTOConverter
 				String i18nObjectFieldName =
 					objectField.getI18nObjectFieldName();
 
-				Map<String, Serializable> objectField_i18n =
+				Map<String, Serializable> originalObjectField_i18n =
 					(Map<String, Serializable>)values.get(i18nObjectFieldName);
+
+				Map<String, Serializable> objectField_i18n;
+
+				if (originalObjectField_i18n != null) {
+					objectField_i18n = new HashMap<>(originalObjectField_i18n);
+				}
+				else {
+					objectField_i18n = null;
+				}
 
 				if (objectField_i18n != null) {
 					serializable = _getLocalizedValue(
