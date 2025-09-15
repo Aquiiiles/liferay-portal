@@ -2346,10 +2346,12 @@ public class ObjectDefinitionLocalServiceTest {
 						LocalizedMapUtil.getLocalizedMap(
 							RandomTestUtil.randomString())
 					).name(
-						"a" + RandomTestUtil.randomString()
+						"textObjectField"
 					).localized(
 						true
 					).build()));
+
+		ObjectDefinition finalObjectDefinition = objectDefinition1;
 
 		AssertUtils.assertFailure(
 			ObjectDefinitionEnableLocalizationException.class,
@@ -2357,7 +2359,23 @@ public class ObjectDefinitionLocalServiceTest {
 				"because translation is enabled for custom fields",
 			() -> _objectDefinitionLocalService.publishCustomObjectDefinition(
 				TestPropsValues.getUserId(),
-				objectDefinition1.getObjectDefinitionId()));
+				finalObjectDefinition.getObjectDefinitionId()));
+
+		objectDefinition1.setEnableLocalization(true);
+		objectDefinition1.setName(ObjectDefinitionTestUtil.getRandomName());
+
+		objectDefinition1 = _updateCustomObjectDefinition(
+			null, objectDefinition1);
+
+		_objectDefinitionLocalService.publishCustomObjectDefinition(
+			TestPropsValues.getUserId(),
+			objectDefinition1.getObjectDefinitionId());
+
+		ObjectField objectField = _objectFieldLocalService.getObjectField(
+			objectDefinition1.getObjectDefinitionId(), "textObjectField");
+
+		Assert.assertEquals(
+			objectDefinition1.getDBTableName(), objectField.getDBTableName());
 
 		ObjectDefinition objectDefinition2 = null;
 		ObjectDefinition objectDefinition3 = null;
@@ -2376,6 +2394,8 @@ public class ObjectDefinitionLocalServiceTest {
 					objectDefinition3.getClassName()));
 		}
 		finally {
+			_objectDefinitionLocalService.deleteObjectDefinition(
+				objectDefinition1);
 			_objectDefinitionLocalService.deleteObjectDefinition(
 				objectDefinition2);
 			_objectDefinitionLocalService.deleteObjectDefinition(
