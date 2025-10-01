@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
+import { ObjectDefinitionAPI } from '@liferay/object-admin-rest-client-js';
 import {Page, expect, mergeTests} from '@playwright/test';
 
 import {formsPagesTest} from '../../../fixtures/formsPagesTest';
@@ -12,8 +13,9 @@ import {getRandomInt} from '../../../utils/getRandomInt';
 import getRandomString from '../../../utils/getRandomString';
 import {waitForAlert} from '../../../utils/waitForAlert';
 import {deleteItems} from './utils/deleteItems';
+import { apiHelpersTest } from '../../../fixtures/apiHelpersTest';
 
-export const test = mergeTests(loginTest(), formsPagesTest);
+export const test = mergeTests(loginTest(), formsPagesTest, apiHelpersTest);
 
 let formPreviewPage: Page;
 
@@ -327,3 +329,136 @@ test(
 		});
 	}
 );
+
+test(
+	'can create a Form with attachment field and submit txt as Guest',
+	async ({
+		apiHelpers,
+		formBuilderPage,
+		formBuilderSidePanelPage,
+		formsPage,
+		page,
+	}) => {
+		const objectDefinitionAPIClient =
+			await apiHelpers.buildRestClient(ObjectDefinitionAPI);
+
+		await objectDefinitionAPIClient.postObjectDefinition({
+			active: true,
+			externalReferenceCode: getRandomString(),
+			label: {en_US: 'Upload Object'},
+			name: 'UploadObject' + getRandomInt(),
+			objectFields: [
+				{
+					DBType: 'Long',
+					businessType: 'Attachment',
+					externalReferenceCode: getRandomString(),
+					indexed: true,
+					label: {en_US: 'Upload Field'},
+					localized: false,
+					name: 'uploadField',
+					required: false,
+					system: false,
+					objectFieldSettings: [
+						{name: 'acceptedFileExtensions', value: 'txt'},
+						{name: 'fileSource', value: 'userComputer'},
+						{name: 'maximumFileSize', value: 104857600},
+					],
+				},
+			],
+			panelCategoryKey: 'control_panel.object',
+			pluralLabel: {en_US: 'Upload Objects'},
+			portlet: true,
+			scope: 'company',
+			status: {code: 0},
+		});
+
+		await page.getByLabel('Open Applications MenuCtrl+').click();
+		await page.getByRole('tab', {name: 'Control Panel'}).click();
+		await page.getByRole('menuitem', {name: 'Roles'}).click();
+		await page.getByRole('link', {name: 'Guest'}).click();
+		await page.getByRole('link', {name: 'Define Permissions'}).click();
+
+		await page.getByPlaceholder('Search').fill('Upload Objects');
+		await page.getByRole('menuitem', {name: 'Upload Objects'}).first().click();
+		await page.locator('[id*="ircfSearchContainer_col-rowChecker"] label').click();
+		await page.locator('[id*="rkonSearchContainer_col-rowChecker"]').getByLabel('').check();
+		await page.locator('[id*="ocerSearchContainer_6"]').getByLabel('View').check();
+		await page.getByRole('button', {name: 'Save'}).click();
+
+		await page.waitForTimeout(1000);
+		await page.getByPlaceholder('Search').fill('Forms');
+		await page.getByRole('menuitem', {name: 'Forms'}).last().click();
+		await page.locator('[id*="ocerSearchContainer_6"]').getByLabel('View All Sites and Asset').check();
+		await page.locator('[id*="ircfSearchContainer_col-rowChecker"]').click();
+		await page.locator('[id*="rkonSearchContainer_col-rowChecker"]').getByLabel('').check();
+		await page.locator('[id*="gtvtSearchContainer_col-rowChecker"]').click();
+		await page.getByRole('button', {name: 'Save'}).click();
+
+		await formsPage.goTo();
+		await formsPage.clickManagementToolbarNewButton();
+
+		await page
+			.locator('[id*="DDMFormAdminPortlet_managementToolbar"]')
+			.getByRole('button')
+			.first()
+			.click();
+		await page.getByLabel('Select a Storage Type').click();
+		await page.getByRole('option', {name: 'Object'}).click();
+		await page.getByLabel('Select Object').click();
+		await page.getByRole('option', {name: 'Upload Object'}).last().click();
+		await page.getByRole('button', {name: 'Done'}).click();
+
+		await formBuilderSidePanelPage.addFieldByDoubleClick('Upload');
+		await formBuilderPage.formTitle.fill('Upload Form Test');
+		await page.getByText('UploadSelect').click();
+		await page.getByLabel('Allow Guest Users to Send').check();
+		await page.getByRole('tab', {name: 'Advanced'}).click();
+		await page.getByLabel('Object Field').click();
+		await page.getByRole('option', {name: 'Upload Field'}).click();
+		await formBuilderPage.clickPublishFormButton();
+
+		await page.getByLabel('Open Product Menu').click();
+		await page.getByRole('button', {name: 'Page Tree'}).click();
+		await page.getByLabel('Add Page').click();
+		await page.getByRole('menuitem', {name: 'Add Page'}).click();
+		await page.getByRole('button', {name: 'Blank'}).click();
+
+		const addPageFrame = page.frameLocator('iframe[title="Add Page"]');
+		await addPageFrame.getByPlaceholder('Add Page Name').fill('guest');
+		await addPageFrame.getByRole('button', {name: 'Add'}).click();
+
+		
+		const searchInput = page.getByLabel('Search Fragments and Widgets');
+		await searchInput.click();
+		await searchInput.fill('form');
+
+		const formItem = page.locator('[draggable="true"]', {hasText: /^Form$/}).first();
+		await formItem.waitFor({state: 'visible'});
+		await formItem.scrollIntoViewIfNeeded();
+
+		await formItem.dragTo(page.locator('.page-editor__drop-zone').first());
+
+		await expect(page.locator('.portlet-forms')).toBeVisible({timeout: 10000});
+
+		const optionsBtn = page.locator('#wrapper').getByRole('button', {name: 'Options'});
+		await optionsBtn.click();
+		await page.getByRole('menuitem', {name: 'Configuration', exact: true}).click();
+
+		const configFrame = page.frameLocator('iframe[title="Configuration"]');
+		await configFrame.getByRole('cell', {name: 'forms'}).click();
+		await configFrame.getByRole('link', {name: 'forms'}).click();
+		await configFrame.getByRole('button', {name: 'Save'}).click();
+
+		await page.getByLabel('close', {exact: true}).click();
+		await page.getByLabel('Publish').click();
+
+		await page.getByLabel('Test Test User Profile').click();
+		await page.getByRole('menuitem', {name: 'Sign Out'}).click();
+		await page.getByRole('menuitem', {name: 'guest'}).click();
+
+		await page.goto('/guest', {waitUntil: 'networkidle'});
+		await formsPage.selectFileFromUserComputer(__dirname, 'sampleFile.txt');
+
+	}
+);
+
