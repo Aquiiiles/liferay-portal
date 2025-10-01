@@ -451,29 +451,38 @@ const Main = ({
 	};
 
 	const isObjectFieldInvalidExtension = (value) => {
-		if (!value || !objectFieldAcceptedFileExtensions) {
-			return false;
-		}
-
-		const fileEntryJSON = JSON.parse(value);
-
-		const fileExtension = fileEntryJSON.mimeType
-			? fileEntryJSON.mimeType.split('/')[1]
-			: fileEntryJSON.extension;
-
-		if (!fileExtension) {
-			return false;
-		}
-
-		const supportedExtensions =
-			objectFieldAcceptedFileExtensions.split(', ');
-
-		if (supportedExtensions.includes(fileExtension)) {
-			return false;
-		}
-
-		return true;
-	};
+        if (!value || !objectFieldAcceptedFileExtensions) {
+            return false;
+        }
+    
+        const fileEntryJSON = JSON.parse(value);
+    
+        let fileExtension = fileEntryJSON.extension?.toLowerCase();
+    
+        if (!fileExtension && fileEntryJSON.mimeType) {
+            const mimeToExt = {
+                'application/msword': 'doc',
+                'application/vnd.ms-excel': 'xls',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+                'text/plain': 'txt',
+            };
+    
+            fileExtension =
+                mimeToExt[fileEntryJSON.mimeType.toLowerCase()] ||
+                fileEntryJSON.mimeType.split('/')[1]?.toLowerCase();
+        }
+    
+        if (!fileExtension) {
+            return false;
+        }
+    
+        const supportedExtensions = objectFieldAcceptedFileExtensions
+            .split(', ')
+            .map((ext) => ext.trim().toLowerCase());
+    
+        return !supportedExtensions.includes(fileExtension);
+    };
 
 	const deleteFileEntry = useCallback(() => {
 		const request = new XMLHttpRequest();
