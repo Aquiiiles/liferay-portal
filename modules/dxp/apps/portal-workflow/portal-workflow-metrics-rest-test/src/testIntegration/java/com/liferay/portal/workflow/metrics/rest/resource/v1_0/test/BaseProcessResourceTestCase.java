@@ -697,11 +697,25 @@ public abstract class BaseProcessResourceTestCase {
 	public void testBatchEngineDeleteImportTask() throws Exception {
 		Process process1 = testBatchEngineDeleteImportTask_addProcess();
 
+		System.out.println("=== DEBUG Before delete ===");
+		System.out.println("Process ID: " + process1.getId());
+		System.out.println("Initial GET status: " +
+						   processResource.getProcessHttpResponse(process1.getId()).getStatusCode());
+		System.out.println("============================");
+
 		testBatchEngineDeleteImportTask_deleteProcess(
 			200, null, process1.getId());
 
-		assertHttpResponseStatusCode(
-			404, processResource.getProcessHttpResponse(process1.getId()));
+		HttpInvoker.HttpResponse afterDeleteResponse =
+			processResource.getProcessHttpResponse(process1.getId());
+
+		System.out.println("=== DEBUG After delete ===");
+		System.out.println("Process ID: " + process1.getId());
+		System.out.println("GET status after delete: " + afterDeleteResponse.getStatusCode());
+		System.out.println("Response body: " + afterDeleteResponse.getContent());
+		System.out.println("============================");
+
+		assertHttpResponseStatusCode(404, afterDeleteResponse);
 	}
 
 	protected Process testBatchEngineDeleteImportTask_addProcess()
