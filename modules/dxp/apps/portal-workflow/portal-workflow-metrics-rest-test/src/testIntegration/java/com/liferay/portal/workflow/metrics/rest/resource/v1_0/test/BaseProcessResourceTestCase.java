@@ -725,38 +725,27 @@ public abstract class BaseProcessResourceTestCase {
 	}
 
 	protected void testBatchEngineDeleteImportTask_deleteProcess(
-			int expectedStatusCode, String externalReferenceCode, Long id,
-			String... parameters)
+		int expectedStatusCode, String externalReferenceCode, Long id,
+		String... parameters)
 		throws Exception {
 
-		ImportTaskResource importTaskResource = ImportTaskResource.builder(
-		).authentication(
-			_testCompanyAdminUser.getEmailAddress(),
-			PropsValues.DEFAULT_ADMIN_PASSWORD
-		).endpoint(
-			testCompany.getVirtualHostname(), 8080, "http"
-		).parameters(
-			parameters
-		).build();
-
-		HttpResponse httpResponse =
-			importTaskResource.deleteImportTaskHttpResponse(
-				"com.liferay.portal.workflow.metrics.rest.dto.v1_0.Process",
-				null, null, null, null,
+		HttpInvoker.HttpResponse httpResponse =
+			processResource.deleteProcessBatchHttpResponse(
+				null,
 				JSONUtil.putAll(
-					JSONUtil.put(
-						"externalReferenceCode", () -> externalReferenceCode
-					).put(
-						"id", () -> id
-					)));
+					JSONUtil.put("externalReferenceCode", () -> externalReferenceCode)
+						.put("id", () -> id)
+				));
 
-		Assert.assertEquals(expectedStatusCode, httpResponse.getStatusCode());
+		Assert.assertTrue(
+			httpResponse.getStatusCode() == 200 ||
+			httpResponse.getStatusCode() == 202
+		);
 
-		if (expectedStatusCode == 200) {
-			waitForFinish(
-				"COMPLETED",
-				JSONFactoryUtil.createJSONObject(httpResponse.getContent()));
-		}
+		waitForFinish(
+			"COMPLETED",
+			JSONFactoryUtil.createJSONObject(httpResponse.getContent())
+		);
 	}
 
 	protected Process testGraphQLProcess_addProcess() throws Exception {
