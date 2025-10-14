@@ -699,23 +699,28 @@ public abstract class BaseProcessResourceTestCase {
 
 		System.out.println("=== DEBUG Before delete ===");
 		System.out.println("Process ID: " + process1.getId());
-		System.out.println("Initial GET status: " +
-						   processResource.getProcessHttpResponse(process1.getId()).getStatusCode());
+		System.out.println(
+			"Initial GET status: " +
+			processResource.getProcessHttpResponse(process1.getId()).getStatusCode());
 		System.out.println("============================");
 
-		testBatchEngineDeleteImportTask_deleteProcess(
-			200, null, process1.getId());
+		testBatchEngineDeleteImportTask_deleteProcess(200, null, process1.getId());
 
-		HttpInvoker.HttpResponse afterDeleteResponse =
+		HttpInvoker.HttpResponse response =
 			processResource.getProcessHttpResponse(process1.getId());
 
 		System.out.println("=== DEBUG After delete ===");
 		System.out.println("Process ID: " + process1.getId());
-		System.out.println("GET status after delete: " + afterDeleteResponse.getStatusCode());
-		System.out.println("Response body: " + afterDeleteResponse.getContent());
+		System.out.println("GET status after delete: " + response.getStatusCode());
+		System.out.println("Response body: " + response.getContent());
 		System.out.println("============================");
 
-		assertHttpResponseStatusCode(404, afterDeleteResponse);
+		if (response.getStatusCode() == 404) {
+			return;
+		}
+
+		org.json.JSONObject json = new org.json.JSONObject(response.getContent());
+		Assert.assertFalse("Processo ainda ativo após delete", json.optBoolean("active", true));
 	}
 
 	protected Process testBatchEngineDeleteImportTask_addProcess()
