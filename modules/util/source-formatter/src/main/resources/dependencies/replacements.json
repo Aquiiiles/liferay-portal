@@ -5135,6 +5135,15 @@
 		"to": "fetchCommercePriceEntry(param#0#, param#1#, param#2#, StringPool.BLANK)"
 	},
 	{
+		"from": "CommerceAccountHelper.getCommerceAccountGroupIds(long paramName)",
+		"issueKey": "LPD-76649",
+		"newImports": [
+			"com.liferay.account.service.AccountGroupLocalService"
+		],
+		"newReference": "AccountGroupLocalService _accountGroupLocalService",
+		"to": "_accountGroupLocalService.getAccountGroupIds(param#0#)"
+	},
+	{
 		"from": "regex:MultiVMPoolUtil\\s*.\\s*getPortalCache\\(\\s*(?<prefixMethodName>[\\s\\S]*?)\\)",
 		"issueKey": "LPS-153962",
 		"newImports": [
