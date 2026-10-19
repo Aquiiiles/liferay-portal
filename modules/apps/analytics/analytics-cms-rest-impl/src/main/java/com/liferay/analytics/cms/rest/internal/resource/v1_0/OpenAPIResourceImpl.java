@@ -113,9 +113,11 @@ public class OpenAPIResourceImpl {
 
 			add(PerformanceTopAssetResourceImpl.class);
 
+			add(TopContributorResourceImpl.class);
+
 			add(OpenAPIResourceImpl.class);
 		}
 	};
 
 }
-// LIFERAY-REST-BUILDER-HASH:-412761359
+// LIFERAY-REST-BUILDER-HASH:1978680789
