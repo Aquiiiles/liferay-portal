@@ -200,6 +200,16 @@ components:
                 views:
                     format: double
                     type: number
+        TopContributor:
+            properties:
+                assetCount:
+                    format: int64
+                    type: integer
+                userId:
+                    format: int64
+                    type: integer
+                userName:
+                    type: string
         TopPage:
             properties:
                 canonicalUrl:
@@ -895,3 +905,46 @@ paths:
                             schema:
                                 type: string
             tags: ["PerformanceTopAsset"]
+    "/top-contributors":
+        get:
+            operationId: getTopContributorsPage
+            parameters:
+                -   in: query
+                    name: depotEntryId
+                    schema:
+                        format: int64
+                        type: integer
+                -   in: query
+                    name: page
+                    schema:
+                        type: integer
+                -   in: query
+                    name: pageSize
+                    schema:
+                        type: integer
+                -   in: query
+                    name: rangeEnd
+                    schema:
+                        type: string
+                -   in: query
+                    name: rangeKey
+                    schema:
+                        type: integer
+                -   in: query
+                    name: rangeStart
+                    schema:
+                        type: string
+            responses:
+                200:
+                    content:
+                        application/json:
+                            schema:
+                                items:
+                                    $ref: "#/components/schemas/TopContributor"
+                                type: array
+                        application/xml:
+                            schema:
+                                items:
+                                    $ref: "#/components/schemas/TopContributor"
+                                type: array
+            tags: ["TopContributor"]
