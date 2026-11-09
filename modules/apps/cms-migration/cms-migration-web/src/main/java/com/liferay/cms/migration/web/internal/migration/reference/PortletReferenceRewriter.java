@@ -34,10 +34,15 @@ import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.Layout;
+import com.liferay.portal.kernel.model.ResourceConstants;
 import com.liferay.portal.kernel.portlet.PortletIdCodec;
+import com.liferay.portal.kernel.security.permission.ResourceActions;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
+import com.liferay.portal.kernel.service.ResourceLocalService;
+import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
+import com.liferay.portal.kernel.service.permission.PortletPermissionUtil;
 import com.liferay.portal.kernel.settings.FallbackKeysSettingsUtil;
 import com.liferay.portal.kernel.settings.PortletInstanceSettingsLocator;
 import com.liferay.portal.kernel.settings.Settings;
@@ -90,6 +95,9 @@ public class PortletReferenceRewriter {
 		JSONFactory jsonFactory, LayoutLocalService layoutLocalService,
 		Portal portal,
 		PortletPreferencesLocalService portletPreferencesLocalService,
+		ResourceActions resourceActions,
+		ResourceLocalService resourceLocalService,
+		ResourcePermissionLocalService resourcePermissionLocalService,
 		SAXReader saxReader) {
 
 		_assetEntryLocalService = assetEntryLocalService;
@@ -104,6 +112,9 @@ public class PortletReferenceRewriter {
 		_layoutLocalService = layoutLocalService;
 		_portal = portal;
 		_portletPreferencesLocalService = portletPreferencesLocalService;
+		_resourceActions = resourceActions;
+		_resourceLocalService = resourceLocalService;
+		_resourcePermissionLocalService = resourcePermissionLocalService;
 		_saxReader = saxReader;
 	}
 
@@ -398,6 +409,8 @@ public class PortletReferenceRewriter {
 			PortletKeys.PREFS_OWNER_TYPE_LAYOUT, layout.getPlid(), newPortletId,
 			portletPreferences);
 
+		_replacePortletPermissions(layout, oldPortletId, newPortletId);
+
 		if (layout.isTypeContent()) {
 			_replacePortletInFragmentEntryLink(
 				layout, oldPortletId, newPortletName, instanceId);
@@ -479,6 +492,46 @@ public class PortletReferenceRewriter {
 			_fragmentEntryLinkLocalService.updateFragmentEntryLink(
 				fragmentEntryLink);
 		}
+	}
+
+	private void _replacePortletPermissions(
+			Layout layout, String oldPortletId, String newPortletId)
+		throws Exception {
+
+		String oldPortletName = PortletIdCodec.decodePortletName(oldPortletId);
+		String oldPrimKey = PortletPermissionUtil.getPrimaryKey(
+			layout.getPlid(), oldPortletId);
+
+		String newPortletName = PortletIdCodec.decodePortletName(newPortletId);
+
+		Map<Long, Set<String>> roleIdsToActionIds =
+			_resourcePermissionLocalService.
+				getAvailableResourcePermissionActionIds(
+					layout.getCompanyId(), oldPortletName,
+					ResourceConstants.SCOPE_INDIVIDUAL, oldPrimKey,
+					_resourceActions.getPortletResourceActions(newPortletName));
+
+		String newPrimKey = PortletPermissionUtil.getPrimaryKey(
+			layout.getPlid(), newPortletId);
+
+		if (roleIdsToActionIds.isEmpty()) {
+			_resourceLocalService.addResources(
+				layout.getCompanyId(), layout.getGroupId(), 0, newPortletName,
+				newPrimKey, true, true, true);
+		}
+		else {
+			_resourcePermissionLocalService.setResourcePermissions(
+				layout.getCompanyId(), newPortletName,
+				ResourceConstants.SCOPE_INDIVIDUAL, newPrimKey,
+				HashMapBuilder.put(
+					roleIdsToActionIds.keySet(),
+					key -> ArrayUtil.toStringArray(roleIdsToActionIds.get(key))
+				).build());
+		}
+
+		_resourceLocalService.deleteResource(
+			layout.getCompanyId(), oldPortletName,
+			ResourceConstants.SCOPE_INDIVIDUAL, oldPrimKey);
 	}
 
 	private void _replaceWebContentDisplay(
@@ -866,6 +919,10 @@ public class PortletReferenceRewriter {
 	private final Portal _portal;
 	private final PortletPreferencesLocalService
 		_portletPreferencesLocalService;
+	private final ResourceActions _resourceActions;
+	private final ResourceLocalService _resourceLocalService;
+	private final ResourcePermissionLocalService
+		_resourcePermissionLocalService;
 	private final SAXReader _saxReader;
 
 }

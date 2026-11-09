@@ -82,10 +82,12 @@ import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionCheckerFactory;
 import com.liferay.portal.kernel.security.permission.PermissionThreadLocal;
+import com.liferay.portal.kernel.security.permission.ResourceActions;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ImageLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
+import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
 import com.liferay.portal.kernel.service.RoleLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
@@ -334,7 +336,9 @@ public class CMSMigrationBackgroundTaskExecutor
 				_fragmentEntryLinkLocalService, _groupLocalService,
 				infoItemReferenceMapper, _journalArticleLocalService,
 				_jsonFactory, _layoutLocalService, _portal,
-				_portletPreferencesLocalService, _saxReader);
+				_portletPreferencesLocalService, _resourceActions,
+				_resourceLocalService, _resourcePermissionLocalService,
+				_saxReader);
 
 		SiteNavigationMenuItemReferenceRewriter
 			siteNavigationMenuItemReferenceRewriter =
@@ -511,6 +515,12 @@ public class CMSMigrationBackgroundTaskExecutor
 
 	@Reference
 	private ReadingTimeEntryLocalService _readingTimeEntryLocalService;
+
+	@Reference
+	private ResourceActions _resourceActions;
+
+	@Reference
+	private ResourceLocalService _resourceLocalService;
 
 	@Reference
 	private ResourcePermissionLocalService _resourcePermissionLocalService;
