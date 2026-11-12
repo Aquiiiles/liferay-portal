@@ -60,17 +60,10 @@ export default function Configuration({
 
 	return (
 		<ClayLayout.Sheet>
-			<ClayForm
-				onSubmit={(event) => {
-					event.preventDefault();
-
-					setSubmitting(true);
-
-					Liferay.Util.postForm(event.currentTarget, {
-						data: {},
-						url: startCMSMigrationURL,
-					});
-				}}
+			<form
+				action={startCMSMigrationURL}
+				method="post"
+				onSubmit={() => setSubmitting(true)}
 			>
 				<ClayLayout.SheetHeader>
 					<h2 className="sheet-title">{title}</h2>
@@ -208,7 +201,7 @@ export default function Configuration({
 						{Liferay.Language.get('cms-migration-start')}
 					</ClayButton>
 				</ClayLayout.SheetFooter>
-			</ClayForm>
+			</form>
 		</ClayLayout.Sheet>
 	);
 }
