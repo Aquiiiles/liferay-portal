@@ -89,8 +89,17 @@ public class CMSMigrationDisplayContextTest {
 
 		_cancelledBackgroundTask = _addBackgroundTask(
 			true, BackgroundTaskConstants.STATUS_CANCELLED, null);
+
+		String failedError = RandomTestUtil.randomString();
+
 		_failedBackgroundTask = _addBackgroundTask(
-			true, BackgroundTaskConstants.STATUS_FAILED, null);
+			true, BackgroundTaskConstants.STATUS_FAILED,
+			JSONUtil.put(
+				"counts", JSONUtil.put("folders", 2)
+			).put(
+				"errors", JSONUtil.put(failedError)
+			).toString());
+
 		_successfulBackgroundTask = _addBackgroundTask(
 			true, BackgroundTaskConstants.STATUS_SUCCESSFUL, null);
 
@@ -200,6 +209,21 @@ public class CMSMigrationDisplayContextTest {
 			jsonObject = _getMigrationJSONObject(
 				_failedBackgroundTask, migrationsJSONArray);
 
+			Assert.assertEquals(
+				JSONUtil.putAll(
+					JSONUtil.put(
+						"label",
+						LanguageUtil.get(LocaleUtil.US, "cms-migration-folders")
+					).put(
+						"value", 2
+					)
+				).toString(),
+				String.valueOf(jsonObject.getJSONArray("counts")));
+			Assert.assertEquals(
+				JSONUtil.put(
+					failedError
+				).toString(),
+				String.valueOf(jsonObject.getJSONArray("errors")));
 			Assert.assertEquals(
 				"danger", jsonObject.getString("statusDisplayType"));
 
