@@ -342,8 +342,6 @@ const Util = {
 
 	openToast: jest.fn(() => true),
 
-	postForm,
-
 	selectEntity: jest.fn(() => {}),
 
 	/**
