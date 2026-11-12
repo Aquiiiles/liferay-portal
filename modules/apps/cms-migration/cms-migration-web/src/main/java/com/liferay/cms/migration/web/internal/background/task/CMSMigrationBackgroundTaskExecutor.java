@@ -85,6 +85,8 @@ import com.liferay.portal.kernel.backgroundtask.constants.BackgroundTaskConstant
 import com.liferay.portal.kernel.backgroundtask.display.BackgroundTaskDisplay;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.language.Language;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.security.auth.PrincipalThreadLocal;
@@ -177,6 +179,8 @@ public class CMSMigrationBackgroundTaskExecutor
 
 		CMSMigrationReport cmsMigrationReport = new CMSMigrationReport();
 
+		int status = BackgroundTaskConstants.STATUS_SUCCESSFUL;
+
 		try {
 			PrincipalThreadLocal.setName(user.getUserId());
 			PermissionThreadLocal.setPermissionChecker(
@@ -210,8 +214,12 @@ public class CMSMigrationBackgroundTaskExecutor
 					user.getUserId()));
 		}
 		catch (Exception exception) {
+			_log.error(exception);
+
 			cmsMigrationReport.addError(
 				"The migration stopped: " + exception.getMessage());
+
+			status = BackgroundTaskConstants.STATUS_FAILED;
 		}
 		finally {
 			PrincipalThreadLocal.setName(name);
@@ -219,9 +227,9 @@ public class CMSMigrationBackgroundTaskExecutor
 			ServiceContextThreadLocal.popServiceContext();
 		}
 
-		int status = BackgroundTaskConstants.STATUS_SUCCESSFUL;
+		if ((status == BackgroundTaskConstants.STATUS_SUCCESSFUL) &&
+			cmsMigrationReport.hasErrors()) {
 
-		if (cmsMigrationReport.hasErrors()) {
 			status = BackgroundTaskConstants.STATUS_COMPLETED_WITH_ERRORS;
 		}
 
@@ -411,6 +419,9 @@ public class CMSMigrationBackgroundTaskExecutor
 			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter,
 			structureEditPageResetter, widgetTemplateMigrator);
 	}
+
+	private static final Log _log = LogFactoryUtil.getLog(
+		CMSMigrationBackgroundTaskExecutor.class);
 
 	@Reference
 	private AssetDisplayPageEntryLocalService
