@@ -47,6 +47,7 @@ import com.liferay.document.library.kernel.service.DLFolderLocalService;
 import com.liferay.document.library.video.external.shortcut.resolver.DLVideoExternalShortcutResolver;
 import com.liferay.dynamic.data.mapping.service.DDMFieldLocalService;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalService;
+import com.liferay.dynamic.data.mapping.service.DDMStructureVersionLocalService;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalService;
 import com.liferay.dynamic.data.mapping.storage.DDMStorageEngineManager;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
@@ -58,6 +59,7 @@ import com.liferay.layout.page.template.service.LayoutPageTemplateEntryLocalServ
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureLocalService;
 import com.liferay.layout.page.template.service.LayoutPageTemplateStructureRelLocalService;
 import com.liferay.list.type.service.ListTypeDefinitionLocalService;
+import com.liferay.list.type.service.ListTypeEntryLocalService;
 import com.liferay.object.field.attachment.AttachmentManager;
 import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectDefinitionSettingLocalService;
@@ -259,8 +261,9 @@ public class CMSMigrationBackgroundTaskExecutor
 
 		ObjectDefinitionMigrator objectDefinitionMigrator =
 			new ObjectDefinitionMigrator(
-				_ddmStructureLocalService, _language,
-				_listTypeDefinitionLocalService, _objectDefinitionLocalService,
+				_ddmStructureLocalService, _ddmStructureVersionLocalService,
+				_language, _listTypeDefinitionLocalService,
+				_listTypeEntryLocalService, _objectDefinitionLocalService,
 				_objectDefinitionSettingLocalService, _objectFieldLocalService,
 				_objectFieldSettingLocalService, _objectFolderLocalService);
 
@@ -404,6 +407,9 @@ public class CMSMigrationBackgroundTaskExecutor
 	private DDMStructureLocalService _ddmStructureLocalService;
 
 	@Reference
+	private DDMStructureVersionLocalService _ddmStructureVersionLocalService;
+
+	@Reference
 	private DDMTemplateLocalService _ddmTemplateLocalService;
 
 	@Reference
@@ -478,6 +484,9 @@ public class CMSMigrationBackgroundTaskExecutor
 
 	@Reference
 	private ListTypeDefinitionLocalService _listTypeDefinitionLocalService;
+
+	@Reference
+	private ListTypeEntryLocalService _listTypeEntryLocalService;
 
 	@Reference
 	private ObjectDefinitionLocalService _objectDefinitionLocalService;

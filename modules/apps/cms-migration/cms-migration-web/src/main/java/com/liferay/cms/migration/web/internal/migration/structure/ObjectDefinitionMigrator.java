@@ -15,13 +15,17 @@ import com.liferay.dynamic.data.mapping.model.DDMForm;
 import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMFormFieldOptions;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
+import com.liferay.dynamic.data.mapping.model.DDMStructureVersion;
 import com.liferay.dynamic.data.mapping.model.LocalizedValue;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalService;
+import com.liferay.dynamic.data.mapping.service.DDMStructureVersionLocalService;
+import com.liferay.dynamic.data.mapping.util.comparator.StructureVersionVersionComparator;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.list.type.entry.util.ListTypeEntryUtil;
 import com.liferay.list.type.model.ListTypeDefinition;
 import com.liferay.list.type.model.ListTypeEntry;
 import com.liferay.list.type.service.ListTypeDefinitionLocalService;
+import com.liferay.list.type.service.ListTypeEntryLocalService;
 import com.liferay.object.constants.ObjectDefinitionConstants;
 import com.liferay.object.constants.ObjectDefinitionSettingConstants;
 import com.liferay.object.constants.ObjectFieldConstants;
@@ -67,8 +71,11 @@ import java.util.Set;
 public class ObjectDefinitionMigrator {
 
 	public ObjectDefinitionMigrator(
-		DDMStructureLocalService ddmStructureLocalService, Language language,
+		DDMStructureLocalService ddmStructureLocalService,
+		DDMStructureVersionLocalService ddmStructureVersionLocalService,
+		Language language,
 		ListTypeDefinitionLocalService listTypeDefinitionLocalService,
+		ListTypeEntryLocalService listTypeEntryLocalService,
 		ObjectDefinitionLocalService objectDefinitionLocalService,
 		ObjectDefinitionSettingLocalService objectDefinitionSettingLocalService,
 		ObjectFieldLocalService objectFieldLocalService,
@@ -76,8 +83,10 @@ public class ObjectDefinitionMigrator {
 		ObjectFolderLocalService objectFolderLocalService) {
 
 		_ddmStructureLocalService = ddmStructureLocalService;
+		_ddmStructureVersionLocalService = ddmStructureVersionLocalService;
 		_language = language;
 		_listTypeDefinitionLocalService = listTypeDefinitionLocalService;
+		_listTypeEntryLocalService = listTypeEntryLocalService;
 		_objectDefinitionLocalService = objectDefinitionLocalService;
 		_objectDefinitionSettingLocalService =
 			objectDefinitionSettingLocalService;
@@ -161,6 +170,7 @@ public class ObjectDefinitionMigrator {
 				cmsMigrationContext,
 				CMSMigrationDDMFormFieldUtil.getLeafDDMFormFields(
 					ddmForm.getDDMFormFields()),
+				Collections.singletonList(ddmStructure),
 				String.valueOf(ddmStructure.getStructureId())));
 
 		Map<Locale, String> nameMap = ddmStructure.getNameMap();
@@ -221,6 +231,7 @@ public class ObjectDefinitionMigrator {
 
 		if (dlFileEntryType != null) {
 			List<DDMFormField> ddmFormFields = new ArrayList<>();
+			List<DDMStructure> ddmStructures = new ArrayList<>();
 
 			for (com.liferay.dynamic.data.mapping.kernel.DDMStructure
 					kernelDDMStructure : dlFileEntryType.getDDMStructures()) {
@@ -232,6 +243,8 @@ public class ObjectDefinitionMigrator {
 				DDMForm ddmForm = ddmStructure.getFullHierarchyDDMForm();
 
 				ddmFormFields.addAll(ddmForm.getDDMFormFields());
+
+				ddmStructures.add(ddmStructure);
 			}
 
 			objectFields.addAll(
@@ -239,7 +252,7 @@ public class ObjectDefinitionMigrator {
 					cmsMigrationContext,
 					CMSMigrationDDMFormFieldUtil.getLeafDDMFormFields(
 						ddmFormFields),
-					"DLFileEntryType" + fileEntryTypeId));
+					ddmStructures, "DLFileEntryType" + fileEntryTypeId));
 		}
 
 		objectDefinition = _getOrAddObjectDefinition(
@@ -401,7 +414,8 @@ public class ObjectDefinitionMigrator {
 
 	private List<ObjectField> _getDDMFormObjectFields(
 			CMSMigrationContext cmsMigrationContext,
-			List<DDMFormField> ddmFormFields, String listTypeKey)
+			List<DDMFormField> ddmFormFields, List<DDMStructure> ddmStructures,
+			String listTypeKey)
 		throws PortalException {
 
 		List<ObjectField> objectFields = new ArrayList<>();
@@ -457,8 +471,8 @@ public class ObjectDefinitionMigrator {
 			if (CMSMigrationDDMFormFieldUtil.isOptionsField(ddmFormField)) {
 				ListTypeDefinition listTypeDefinition =
 					_getOrAddListTypeDefinition(
-						cmsMigrationContext, ddmFormField, labelMap,
-						listTypeKey);
+						cmsMigrationContext, ddmFormField, ddmStructures,
+						labelMap, listTypeKey);
 
 				objectField.setListTypeDefinitionId(
 					listTypeDefinition.getListTypeDefinitionId());
@@ -525,22 +539,14 @@ public class ObjectDefinitionMigrator {
 
 	private ListTypeDefinition _getOrAddListTypeDefinition(
 			CMSMigrationContext cmsMigrationContext, DDMFormField ddmFormField,
-			Map<Locale, String> labelMap, String listTypeKey)
+			List<DDMStructure> ddmStructures, Map<Locale, String> labelMap,
+			String listTypeKey)
 		throws PortalException {
 
 		String externalReferenceCode = StringBundler.concat(
 			CMSMigrationConstants.EXTERNAL_REFERENCE_CODE_PREFIX_LIST_TYPE,
 			listTypeKey, StringPool.UNDERLINE,
 			CMSMigrationDDMFormFieldUtil.getObjectFieldName(ddmFormField));
-
-		ListTypeDefinition listTypeDefinition =
-			_listTypeDefinitionLocalService.
-				fetchListTypeDefinitionByExternalReferenceCode(
-					externalReferenceCode, cmsMigrationContext.getCompanyId());
-
-		if (listTypeDefinition != null) {
-			return listTypeDefinition;
-		}
 
 		List<ListTypeEntry> listTypeEntries = new ArrayList<>();
 
@@ -572,9 +578,82 @@ public class ObjectDefinitionMigrator {
 						optionValue)));
 		}
 
-		return _listTypeDefinitionLocalService.addListTypeDefinition(
-			externalReferenceCode, cmsMigrationContext.getUserId(), labelMap,
-			false, listTypeEntries, cmsMigrationContext.getServiceContext());
+		for (DDMStructure ddmStructure : ddmStructures) {
+			List<DDMStructureVersion> ddmStructureVersions = ListUtil.sort(
+				_ddmStructureVersionLocalService.getStructureVersions(
+					ddmStructure.getStructureId()),
+				new StructureVersionVersionComparator());
+
+			for (DDMStructureVersion ddmStructureVersion :
+					ddmStructureVersions) {
+
+				DDMForm ddmForm = ddmStructureVersion.getDDMForm();
+
+				Map<String, DDMFormField> ddmFormFieldsMap =
+					ddmForm.getDDMFormFieldsMap(true);
+
+				DDMFormField versionDDMFormField = ddmFormFieldsMap.get(
+					ddmFormField.getName());
+
+				if (versionDDMFormField == null) {
+					continue;
+				}
+
+				DDMFormFieldOptions versionDDMFormFieldOptions =
+					versionDDMFormField.getDDMFormFieldOptions();
+
+				for (String optionValue :
+						versionDDMFormFieldOptions.getOptionsValues()) {
+
+					String key =
+						CMSMigrationDDMFormFieldUtil.getListTypeEntryKey(
+							optionValue);
+
+					if (!keys.add(key)) {
+						continue;
+					}
+
+					listTypeEntries.add(
+						ListTypeEntryUtil.createListTypeEntry(
+							key,
+							_getLabelMap(
+								versionDDMFormFieldOptions.getOptionLabels(
+									optionValue),
+								optionValue)));
+				}
+			}
+		}
+
+		ListTypeDefinition listTypeDefinition =
+			_listTypeDefinitionLocalService.
+				fetchListTypeDefinitionByExternalReferenceCode(
+					externalReferenceCode, cmsMigrationContext.getCompanyId());
+
+		if (listTypeDefinition == null) {
+			return _listTypeDefinitionLocalService.addListTypeDefinition(
+				externalReferenceCode, cmsMigrationContext.getUserId(),
+				labelMap, false, listTypeEntries,
+				cmsMigrationContext.getServiceContext());
+		}
+
+		for (ListTypeEntry listTypeEntry : listTypeEntries) {
+			ListTypeEntry existingListTypeEntry =
+				_listTypeEntryLocalService.fetchListTypeEntry(
+					listTypeDefinition.getListTypeDefinitionId(),
+					listTypeEntry.getKey());
+
+			if (existingListTypeEntry != null) {
+				continue;
+			}
+
+			_listTypeEntryLocalService.addListTypeEntry(
+				null, cmsMigrationContext.getUserId(),
+				listTypeDefinition.getListTypeDefinitionId(),
+				listTypeEntry.getKey(), listTypeEntry.getNameMap(),
+				listTypeDefinition.isSystem());
+		}
+
+		return listTypeDefinition;
 	}
 
 	private ObjectDefinition _getOrAddObjectDefinition(
@@ -657,9 +736,12 @@ public class ObjectDefinitionMigrator {
 	}
 
 	private final DDMStructureLocalService _ddmStructureLocalService;
+	private final DDMStructureVersionLocalService
+		_ddmStructureVersionLocalService;
 	private final Language _language;
 	private final ListTypeDefinitionLocalService
 		_listTypeDefinitionLocalService;
+	private final ListTypeEntryLocalService _listTypeEntryLocalService;
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService;
 	private final ObjectDefinitionSettingLocalService
 		_objectDefinitionSettingLocalService;
