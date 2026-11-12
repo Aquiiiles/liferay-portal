@@ -36,6 +36,7 @@ import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalService;
 import com.liferay.dynamic.data.mapping.test.util.DDMFormTestUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMStructureTestUtil;
 import com.liferay.dynamic.data.mapping.test.util.DDMTemplateTestUtil;
+import com.liferay.dynamic.data.mapping.util.DDMUtil;
 import com.liferay.fragment.model.FragmentEntryLink;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
 import com.liferay.journal.constants.JournalArticleConstants;
@@ -765,6 +766,49 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 		Assert.assertEquals(
 			ObjectFieldConstants.DB_TYPE_DOUBLE, objectField.getDBType());
 		Assert.assertTrue(Validator.isNull(objectField.getIndexedLanguageId()));
+	}
+
+	@Test
+	public void testExecuteWithRemovedDDMFormFieldOption() throws Exception {
+		String optionValue = RandomTestUtil.randomString();
+		String removedOptionValue = RandomTestUtil.randomString();
+
+		DDMStructure ddmStructure = _addSelectDDMStructure(
+			optionValue, removedOptionValue);
+
+		JournalArticle journalArticle =
+			JournalTestUtil.addArticleWithXMLContent(
+				_group.getGroupId(),
+				DDMStructureTestUtil.getSampleStructuredContent(
+					"choice", "[\"" + removedOptionValue + "\"]"),
+				ddmStructure.getStructureKey(), null);
+
+		DDMForm ddmForm = ddmStructure.getDDMForm();
+
+		Map<String, DDMFormField> ddmFormFieldsMap =
+			ddmForm.getDDMFormFieldsMap(false);
+
+		DDMFormField ddmFormField = ddmFormFieldsMap.get("choice");
+
+		DDMFormFieldOptions ddmFormFieldOptions = new DDMFormFieldOptions();
+
+		ddmFormFieldOptions.addOptionLabel(
+			optionValue, LocaleUtil.US, optionValue);
+
+		ddmFormField.setDDMFormFieldOptions(ddmFormFieldOptions);
+
+		_ddmStructureLocalService.updateStructure(
+			TestPropsValues.getUserId(), ddmStructure.getStructureId(), ddmForm,
+			DDMUtil.getDefaultDDMFormLayout(ddmForm),
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		_assertSuccessful(_execute(_group.getGroupId(), false));
+
+		ObjectEntry objectEntry = _getObjectEntry(journalArticle);
+
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		Assert.assertEquals(removedOptionValue, values.get("choice"));
 	}
 
 	@Test
