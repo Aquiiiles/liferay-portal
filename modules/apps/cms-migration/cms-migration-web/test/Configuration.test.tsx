@@ -37,15 +37,27 @@ function renderConfiguration({spaces = SPACES} = {}) {
 	);
 }
 
+async function submitConfiguration() {
+	const button = screen.getByRole<HTMLButtonElement>('button', {
+		name: 'cms-migration-start',
+	});
+
+	const {form} = button;
+
+	if (!form) {
+		throw new Error('The start button is not inside a form');
+	}
+
+	const onSubmit = jest.fn((event: Event) => event.preventDefault());
+
+	form.addEventListener('submit', onSubmit);
+
+	await userEvent.click(button);
+
+	return {button, form, onSubmit};
+}
+
 describe('Configuration', () => {
-	beforeEach(() => {
-		jest.spyOn(Liferay.Util, 'postForm').mockImplementation(() => {});
-	});
-
-	afterEach(() => {
-		jest.restoreAllMocks();
-	});
-
 	it('shows the title and the description of the migration', () => {
 		renderConfiguration();
 
@@ -60,17 +72,12 @@ describe('Configuration', () => {
 	it('posts the namespaced configuration to the start migration URL', async () => {
 		renderConfiguration();
 
-		const button = screen.getByRole<HTMLButtonElement>('button', {
-			name: 'cms-migration-start',
-		});
+		const {form, onSubmit} = await submitConfiguration();
 
-		await userEvent.click(button);
-
-		expect(Liferay.Util.postForm).toHaveBeenCalledWith(button.form, {
-			data: {},
-			url: 'http://localhost/start',
-		});
-		expect(button.form).toHaveFormValues({
+		expect(onSubmit).toHaveBeenCalledTimes(1);
+		expect(form).toHaveAttribute('action', 'http://localhost/start');
+		expect(form).toHaveAttribute('method', 'post');
+		expect(form).toHaveFormValues({
 			[`${PORTLET_NAMESPACE}depotEntryId`]: '10',
 			[`${PORTLET_NAMESPACE}migrateBlogsEntries`]: true,
 			[`${PORTLET_NAMESPACE}migrateFileEntries`]: true,
@@ -88,10 +95,9 @@ describe('Configuration', () => {
 			'2'
 		);
 
-		const {form} = screen.getByRole<HTMLButtonElement>('button', {
-			name: 'cms-migration-start',
-		});
+		const {form, onSubmit} = await submitConfiguration();
 
+		expect(onSubmit).toHaveBeenCalledTimes(1);
 		expect(form).toHaveFormValues({
 			[`${PORTLET_NAMESPACE}sourceGroupId`]: '2',
 		});
@@ -148,10 +154,9 @@ describe('Configuration', () => {
 			'New Space'
 		);
 
-		const {form} = screen.getByRole<HTMLButtonElement>('button', {
-			name: 'cms-migration-start',
-		});
+		const {form, onSubmit} = await submitConfiguration();
 
+		expect(onSubmit).toHaveBeenCalledTimes(1);
 		expect(form).toHaveFormValues({
 			[`${PORTLET_NAMESPACE}depotEntryId`]: '0',
 			[`${PORTLET_NAMESPACE}spaceName`]: 'New Space',
@@ -194,13 +199,11 @@ describe('Configuration', () => {
 	it('disables the start button once the migration is submitted', async () => {
 		renderConfiguration();
 
-		const button = screen.getByRole<HTMLButtonElement>('button', {
-			name: 'cms-migration-start',
-		});
+		expect(
+			screen.getByRole('button', {name: 'cms-migration-start'})
+		).toBeEnabled();
 
-		expect(button).toBeEnabled();
-
-		await userEvent.click(button);
+		const {button} = await submitConfiguration();
 
 		expect(button).toBeDisabled();
 	});
