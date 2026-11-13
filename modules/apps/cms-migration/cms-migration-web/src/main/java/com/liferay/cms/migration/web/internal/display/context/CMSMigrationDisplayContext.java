@@ -67,87 +67,11 @@ public class CMSMigrationDisplayContext {
 			WebKeys.THEME_DISPLAY);
 	}
 
-	public List<BackgroundTask> getBackgroundTasks() {
-		return ListUtil.sort(
-			_backgroundTaskManager.getBackgroundTasks(
-				_themeDisplay.getCompanyGroupId(),
-				CMSMigrationBackgroundTaskExecutor.class.getName()),
-			(backgroundTask1, backgroundTask2) -> Long.compare(
-				backgroundTask2.getBackgroundTaskId(),
-				backgroundTask1.getBackgroundTaskId()));
-	}
-
-	public CMSMigrationReport getCMSMigrationReport(
-		BackgroundTask backgroundTask) {
-
-		String statusMessage = backgroundTask.getStatusMessage();
-
-		if (Validator.isNull(statusMessage)) {
-			return new CMSMigrationReport();
-		}
-
-		try {
-			return CMSMigrationReport.of(
-				JSONFactoryUtil.createJSONObject(statusMessage));
-		}
-		catch (Exception exception) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(exception);
-			}
-
-			CMSMigrationReport cmsMigrationReport = new CMSMigrationReport();
-
-			cmsMigrationReport.addError(statusMessage);
-
-			return cmsMigrationReport;
-		}
-	}
-
-	public List<Group> getGroups() {
-		List<Group> groups = new ArrayList<>();
-
-		for (Group group :
-				_groupLocalService.getActiveGroups(
-					_themeDisplay.getCompanyId(), true, true, QueryUtil.ALL_POS,
-					QueryUtil.ALL_POS, null)) {
-
-			if (group.isDepot() || group.isStagingGroup() || !group.isSite()) {
-				continue;
-			}
-
-			groups.add(group);
-		}
-
-		return groups;
-	}
-
-	public int getProgress(BackgroundTask backgroundTask) {
-		BackgroundTaskStatus backgroundTaskStatus =
-			BackgroundTaskStatusRegistryUtil.getBackgroundTaskStatus(
-				backgroundTask.getBackgroundTaskId());
-
-		if (backgroundTaskStatus == null) {
-			return 0;
-		}
-
-		long total = GetterUtil.getLong(
-			backgroundTaskStatus.getAttribute("total"));
-
-		if (total == 0) {
-			return 0;
-		}
-
-		long counter = GetterUtil.getLong(
-			backgroundTaskStatus.getAttribute("counter"));
-
-		return (int)Math.min(100, Math.round((double)counter / total * 100));
-	}
-
 	public Map<String, Object> getProps() throws Exception {
 		return HashMapBuilder.<String, Object>put(
 			"groups",
 			JSONUtil.toJSONArray(
-				getGroups(),
+				_getGroups(),
 				group -> JSONUtil.put(
 					"label", group.getDescriptiveName(_themeDisplay.getLocale())
 				).put(
@@ -155,13 +79,13 @@ public class CMSMigrationDisplayContext {
 				))
 		).put(
 			"migrations",
-			JSONUtil.toJSONArray(getBackgroundTasks(), this::_toJSONObject)
+			JSONUtil.toJSONArray(_getBackgroundTasks(), this::_toJSONObject)
 		).put(
 			"portletNamespace", _renderResponse.getNamespace()
 		).put(
 			"spaces",
 			JSONUtil.toJSONArray(
-				getSpaces(),
+				_getSpaces(),
 				depotEntry -> {
 					Group group = depotEntry.getGroup();
 
@@ -198,12 +122,88 @@ public class CMSMigrationDisplayContext {
 		return _renderResponse;
 	}
 
-	public List<DepotEntry> getSpaces() {
+	private List<BackgroundTask> _getBackgroundTasks() {
+		return ListUtil.sort(
+			_backgroundTaskManager.getBackgroundTasks(
+				_themeDisplay.getCompanyGroupId(),
+				CMSMigrationBackgroundTaskExecutor.class.getName()),
+			(backgroundTask1, backgroundTask2) -> Long.compare(
+				backgroundTask2.getBackgroundTaskId(),
+				backgroundTask1.getBackgroundTaskId()));
+	}
+
+	private CMSMigrationReport _getCMSMigrationReport(
+		BackgroundTask backgroundTask) {
+
+		String statusMessage = backgroundTask.getStatusMessage();
+
+		if (Validator.isNull(statusMessage)) {
+			return new CMSMigrationReport();
+		}
+
+		try {
+			return CMSMigrationReport.of(
+				JSONFactoryUtil.createJSONObject(statusMessage));
+		}
+		catch (Exception exception) {
+			if (_log.isDebugEnabled()) {
+				_log.debug(exception);
+			}
+
+			CMSMigrationReport cmsMigrationReport = new CMSMigrationReport();
+
+			cmsMigrationReport.addError(statusMessage);
+
+			return cmsMigrationReport;
+		}
+	}
+
+	private List<Group> _getGroups() {
+		List<Group> groups = new ArrayList<>();
+
+		for (Group group :
+				_groupLocalService.getActiveGroups(
+					_themeDisplay.getCompanyId(), true, true, QueryUtil.ALL_POS,
+					QueryUtil.ALL_POS, null)) {
+
+			if (group.isDepot() || group.isStagingGroup() || !group.isSite()) {
+				continue;
+			}
+
+			groups.add(group);
+		}
+
+		return groups;
+	}
+
+	private int _getProgress(BackgroundTask backgroundTask) {
+		BackgroundTaskStatus backgroundTaskStatus =
+			BackgroundTaskStatusRegistryUtil.getBackgroundTaskStatus(
+				backgroundTask.getBackgroundTaskId());
+
+		if (backgroundTaskStatus == null) {
+			return 0;
+		}
+
+		long total = GetterUtil.getLong(
+			backgroundTaskStatus.getAttribute("total"));
+
+		if (total == 0) {
+			return 0;
+		}
+
+		long counter = GetterUtil.getLong(
+			backgroundTaskStatus.getAttribute("counter"));
+
+		return (int)Math.min(100, Math.round((double)counter / total * 100));
+	}
+
+	private List<DepotEntry> _getSpaces() {
 		return _depotEntryLocalService.getDepotEntries(
 			_themeDisplay.getCompanyId(), DepotConstants.TYPE_SPACE);
 	}
 
-	public JSONObject getStatusJSONObject(BackgroundTask backgroundTask)
+	private JSONObject _getStatusJSONObject(BackgroundTask backgroundTask)
 		throws Exception {
 
 		BackgroundTaskStatus backgroundTaskStatus =
@@ -221,7 +221,7 @@ public class CMSMigrationDisplayContext {
 	private JSONObject _toJSONObject(BackgroundTask backgroundTask)
 		throws Exception {
 
-		CMSMigrationReport cmsMigrationReport = getCMSMigrationReport(
+		CMSMigrationReport cmsMigrationReport = _getCMSMigrationReport(
 			backgroundTask);
 
 		Map<String, Long> counts = cmsMigrationReport.getCounts();
@@ -255,7 +255,7 @@ public class CMSMigrationDisplayContext {
 		).put(
 			"name", backgroundTask.getName()
 		).put(
-			"progress", getProgress(backgroundTask)
+			"progress", _getProgress(backgroundTask)
 		).put(
 			"statusLabel",
 			LanguageUtil.get(
@@ -280,7 +280,7 @@ public class CMSMigrationDisplayContext {
 		}
 
 		if (backgroundTask.isInProgress()) {
-			JSONObject statusJSONObject = getStatusJSONObject(backgroundTask);
+			JSONObject statusJSONObject = _getStatusJSONObject(backgroundTask);
 
 			jsonObject.put(
 				"itemTitle", statusJSONObject.getString("itemTitle"));
