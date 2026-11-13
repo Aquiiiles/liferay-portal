@@ -19,6 +19,7 @@ import com.liferay.cms.migration.web.internal.migration.content.BlogsEntryMigrat
 import com.liferay.cms.migration.web.internal.migration.content.FileEntryMigrator;
 import com.liferay.cms.migration.web.internal.migration.content.FolderMigrator;
 import com.liferay.cms.migration.web.internal.migration.content.JournalArticleMigrator;
+import com.liferay.cms.migration.web.internal.migration.content.ObjectEntryScopeMigrator;
 import com.liferay.cms.migration.web.internal.migration.entry.AttachmentAlternativeTextWriter;
 import com.liferay.cms.migration.web.internal.migration.entry.AttachmentCopier;
 import com.liferay.cms.migration.web.internal.migration.entry.DDMFormValuesConverter;
@@ -34,6 +35,7 @@ import com.liferay.cms.migration.web.internal.migration.reference.PortletReferen
 import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigationMenuItemReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.WidgetTemplateScriptRewriter;
 import com.liferay.cms.migration.web.internal.migration.structure.ObjectDefinitionMigrator;
+import com.liferay.cms.migration.web.internal.migration.structure.ObjectDefinitionScopeConverter;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.JournalTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
@@ -67,6 +69,7 @@ import com.liferay.object.service.ObjectDefinitionLocalService;
 import com.liferay.object.service.ObjectDefinitionSettingLocalService;
 import com.liferay.object.service.ObjectEntryFolderLocalService;
 import com.liferay.object.service.ObjectEntryLocalService;
+import com.liferay.object.service.ObjectEntryVersionLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectFieldSettingLocalService;
 import com.liferay.object.service.ObjectFolderLocalService;
@@ -101,6 +104,7 @@ import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.xml.SAXReader;
 import com.liferay.reading.time.calculator.ReadingTimeCalculator;
 import com.liferay.reading.time.service.ReadingTimeEntryLocalService;
@@ -188,12 +192,17 @@ public class CMSMigrationBackgroundTaskExecutor
 					GetterUtil.getBoolean(
 						taskContextMap.get("migrateJournalArticles")),
 					GetterUtil.getBoolean(
+						taskContextMap.get("migrateObjectEntries")),
+					GetterUtil.getBoolean(
 						taskContextMap.get("migrateRepeatableFields")),
 					cmsMigrationReport,
 					GetterUtil.getBoolean(taskContextMap.get("rewritePages")),
 					serviceContext, sourceGroup,
 					cmsMigrationBackgroundTaskStatusMessageSender::
 						sendItemStatusMessage,
+					StringUtil.split(
+						GetterUtil.getString(
+							taskContextMap.get("titleObjectFieldNames"))),
 					user.getUserId()));
 		}
 		catch (Exception exception) {
@@ -342,6 +351,19 @@ public class CMSMigrationBackgroundTaskExecutor
 				_journalArticleResourceLocalService, _jsonFactory, _language,
 				objectDefinitionMigrator, objectEntryWriter);
 
+		ObjectEntryScopeMigrator objectEntryScopeMigrator =
+			new ObjectEntryScopeMigrator(
+				_assetEntryLocalService, attachmentCopier, _dlAppLocalService,
+				_objectDefinitionLocalService,
+				new ObjectDefinitionScopeConverter(
+					_objectDefinitionLocalService, objectDefinitionMigrator,
+					_objectDefinitionSettingLocalService,
+					_objectEntryLocalService, _objectFieldLocalService,
+					_objectFieldSettingLocalService, _objectFolderLocalService),
+				_objectEntryFolderLocalService, _objectEntryLocalService,
+				_objectEntryVersionLocalService, _objectFieldLocalService,
+				_objectRelationshipLocalService);
+
 		WidgetTemplateMigrator widgetTemplateMigrator =
 			new WidgetTemplateMigrator(
 				_ddmTemplateLocalService, _portal,
@@ -374,9 +396,9 @@ public class CMSMigrationBackgroundTaskExecutor
 			htmlReferenceRewriter, journalArticleMigrator,
 			journalTemplateMigrator, _layoutLocalService,
 			layoutReferenceRewriter, _objectDefinitionLocalService,
-			_objectEntryLocalService, _objectFieldLocalService,
-			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter,
-			widgetTemplateMigrator);
+			_objectEntryLocalService, objectEntryScopeMigrator,
+			_objectFieldLocalService, portletReferenceRewriter,
+			siteNavigationMenuItemReferenceRewriter, widgetTemplateMigrator);
 	}
 
 	@Reference
@@ -517,6 +539,9 @@ public class CMSMigrationBackgroundTaskExecutor
 
 	@Reference
 	private ObjectEntryLocalService _objectEntryLocalService;
+
+	@Reference
+	private ObjectEntryVersionLocalService _objectEntryVersionLocalService;
 
 	@Reference
 	private ObjectFieldLocalService _objectFieldLocalService;

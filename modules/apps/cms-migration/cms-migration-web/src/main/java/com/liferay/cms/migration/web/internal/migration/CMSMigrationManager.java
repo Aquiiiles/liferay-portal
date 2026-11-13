@@ -5,7 +5,6 @@
 
 package com.liferay.cms.migration.web.internal.migration;
 
-import com.liferay.asset.kernel.model.AssetEntry;
 import com.liferay.asset.kernel.service.AssetEntryLocalService;
 import com.liferay.cms.migration.web.internal.background.task.CMSMigrationBackgroundTaskStatusMessageSender;
 import com.liferay.cms.migration.web.internal.constants.CMSMigrationConstants;
@@ -13,6 +12,7 @@ import com.liferay.cms.migration.web.internal.migration.content.BlogsEntryMigrat
 import com.liferay.cms.migration.web.internal.migration.content.FileEntryMigrator;
 import com.liferay.cms.migration.web.internal.migration.content.FolderMigrator;
 import com.liferay.cms.migration.web.internal.migration.content.JournalArticleMigrator;
+import com.liferay.cms.migration.web.internal.migration.content.ObjectEntryScopeMigrator;
 import com.liferay.cms.migration.web.internal.migration.reference.AssetListEntryReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.HTMLReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.LayoutReferenceRewriter;
@@ -24,7 +24,6 @@ import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateM
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.object.constants.ObjectFieldConstants;
-import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.service.ObjectDefinitionLocalService;
@@ -40,7 +39,6 @@ import com.liferay.portal.kernel.model.Layout;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
 import com.liferay.portal.kernel.service.ServiceContext;
-import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 import java.io.Serializable;
 
@@ -76,6 +74,7 @@ public class CMSMigrationManager {
 		LayoutReferenceRewriter layoutReferenceRewriter,
 		ObjectDefinitionLocalService objectDefinitionLocalService,
 		ObjectEntryLocalService objectEntryLocalService,
+		ObjectEntryScopeMigrator objectEntryScopeMigrator,
 		ObjectFieldLocalService objectFieldLocalService,
 		PortletReferenceRewriter portletReferenceRewriter,
 		SiteNavigationMenuItemReferenceRewriter
@@ -99,6 +98,7 @@ public class CMSMigrationManager {
 		_layoutReferenceRewriter = layoutReferenceRewriter;
 		_objectDefinitionLocalService = objectDefinitionLocalService;
 		_objectEntryLocalService = objectEntryLocalService;
+		_objectEntryScopeMigrator = objectEntryScopeMigrator;
 		_objectFieldLocalService = objectFieldLocalService;
 		_portletReferenceRewriter = portletReferenceRewriter;
 		_siteNavigationMenuItemReferenceRewriter =
@@ -177,6 +177,14 @@ public class CMSMigrationManager {
 				).size());
 
 			_blogsEntryMigrator.migrateAll(cmsMigrationContext);
+		}
+
+		if (cmsMigrationContext.isMigrateObjectEntries()) {
+			_sendPhase(
+				CMSMigrationConstants.PHASE_OBJECT_ENTRIES,
+				_objectEntryScopeMigrator.getCount(cmsMigrationContext));
+
+			_objectEntryScopeMigrator.migrateAll(cmsMigrationContext);
 		}
 
 		_rewriteContentLinks(cmsMigrationContext);
@@ -340,26 +348,11 @@ public class CMSMigrationManager {
 			(ServiceContext)cmsMigrationContext.getServiceContext(
 			).clone();
 
-		ObjectDefinition objectDefinition =
+		ObjectEntryScopeMigrator.populateServiceContext(
+			_assetEntryLocalService,
 			_objectDefinitionLocalService.getObjectDefinition(
-				objectEntry.getObjectDefinitionId());
-
-		AssetEntry assetEntry = _assetEntryLocalService.fetchEntry(
-			objectDefinition.getClassName(), objectEntry.getObjectEntryId());
-
-		if (assetEntry != null) {
-			serviceContext.setAssetCategoryIds(assetEntry.getCategoryIds());
-			serviceContext.setAssetPriority(assetEntry.getPriority());
-			serviceContext.setAssetTagNames(assetEntry.getTagNames());
-		}
-
-		if (objectEntry.isApproved()) {
-			serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
-		}
-		else {
-			serviceContext.setWorkflowAction(
-				WorkflowConstants.ACTION_SAVE_DRAFT);
-		}
+				objectEntry.getObjectDefinitionId()),
+			objectEntry, serviceContext);
 
 		ObjectEntry updatedObjectEntry =
 			_objectEntryLocalService.updateObjectEntry(
@@ -437,6 +430,7 @@ public class CMSMigrationManager {
 	private final LayoutReferenceRewriter _layoutReferenceRewriter;
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService;
 	private final ObjectEntryLocalService _objectEntryLocalService;
+	private final ObjectEntryScopeMigrator _objectEntryScopeMigrator;
 	private final ObjectFieldLocalService _objectFieldLocalService;
 	private final PortletReferenceRewriter _portletReferenceRewriter;
 	private final SiteNavigationMenuItemReferenceRewriter
