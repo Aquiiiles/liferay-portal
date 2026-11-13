@@ -5,17 +5,11 @@
 
 import {expect, mergeTests} from '@playwright/test';
 
-import {featureFlagsTest} from '../../../fixtures/featureFlagsTest';
 import {loginTest} from '../../../fixtures/loginTest';
 import {PORTLET_URLS} from '../../../utils/portletUrls';
 import {waitForAlert} from '../../../utils/waitForAlert';
 
-const test = mergeTests(
-	featureFlagsTest({
-		'ECU-21107': {enabled: true},
-	}),
-	loginTest()
-);
+const test = mergeTests(loginTest());
 
 test(
 	'The error alert stays visible after starting a migration without a new space name',
