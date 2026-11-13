@@ -45,6 +45,9 @@ public class CMSMigrationConstants {
 	public static final String EXTERNAL_REFERENCE_CODE_PREFIX_LIST_TYPE =
 		EXTERNAL_REFERENCE_CODE_PREFIX + "LIST_TYPE_";
 
+	public static final String EXTERNAL_REFERENCE_CODE_PREFIX_OBJECT_ENTRY =
+		EXTERNAL_REFERENCE_CODE_PREFIX + "OBJECT_ENTRY_";
+
 	public static final String EXTERNAL_REFERENCE_CODE_PREFIX_WIDGET_TEMPLATE =
 		EXTERNAL_REFERENCE_CODE_PREFIX + "WIDGET_TEMPLATE_";
 
@@ -62,6 +65,8 @@ public class CMSMigrationConstants {
 	public static final String OBJECT_FIELD_NAME_DESCRIPTION = "description";
 
 	public static final String OBJECT_FIELD_NAME_FILE = "file";
+
+	public static final String OBJECT_FIELD_NAME_LEGACY_TITLE = "legacyTitle";
 
 	public static final String OBJECT_FIELD_NAME_SMALL_IMAGE = "smallImage";
 
@@ -84,6 +89,8 @@ public class CMSMigrationConstants {
 	public static final String PHASE_FOLDERS = "folders";
 
 	public static final String PHASE_JOURNAL_ARTICLES = "journal-articles";
+
+	public static final String PHASE_OBJECT_ENTRIES = "object-entries";
 
 	public static final String PHASE_PAGES = "pages";
 

@@ -103,6 +103,44 @@ public class ObjectDefinitionMigrator {
 		_objectRelationshipLocalService = objectRelationshipLocalService;
 	}
 
+	public void addContentObjectField(
+			CMSMigrationContext cmsMigrationContext,
+			ObjectDefinition objectDefinition)
+		throws PortalException {
+
+		_addMissingObjectFields(
+			cmsMigrationContext, objectDefinition,
+			ListUtil.fromArray(
+				_createObjectField(
+					ObjectFieldConstants.BUSINESS_TYPE_RICH_TEXT,
+					_getLabelMap("content"), true,
+					CMSMigrationConstants.OBJECT_FIELD_NAME_CONTENT, false)));
+	}
+
+	public void addObjectField(
+			CMSMigrationContext cmsMigrationContext,
+			ObjectDefinition objectDefinition, ObjectField objectField)
+		throws PortalException {
+
+		_addMissingObjectFields(
+			cmsMigrationContext, objectDefinition,
+			ListUtil.fromArray(objectField));
+	}
+
+	public void addTitleObjectField(
+			CMSMigrationContext cmsMigrationContext,
+			ObjectDefinition objectDefinition)
+		throws PortalException {
+
+		_addMissingObjectFields(
+			cmsMigrationContext, objectDefinition,
+			ListUtil.fromArray(
+				_createObjectField(
+					ObjectFieldConstants.BUSINESS_TYPE_TEXT,
+					_getLabelMap("title"), true,
+					CMSMigrationConstants.OBJECT_FIELD_NAME_TITLE, true)));
+	}
+
 	public ObjectDefinition getExternalVideoObjectDefinition(
 			CMSMigrationContext cmsMigrationContext)
 		throws PortalException {
