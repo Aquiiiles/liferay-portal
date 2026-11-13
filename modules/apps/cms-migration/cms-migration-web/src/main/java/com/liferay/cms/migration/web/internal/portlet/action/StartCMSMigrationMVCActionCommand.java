@@ -91,6 +91,9 @@ public class StartCMSMigrationMVCActionCommand extends BaseMVCActionCommand {
 					ParamUtil.getBoolean(
 						actionRequest, "migrateJournalArticles")
 				).put(
+					"migrateObjectEntries",
+					ParamUtil.getBoolean(actionRequest, "migrateObjectEntries")
+				).put(
 					"migrateRepeatableFields",
 					ParamUtil.getBoolean(
 						actionRequest, "migrateRepeatableFields")
@@ -99,6 +102,9 @@ public class StartCMSMigrationMVCActionCommand extends BaseMVCActionCommand {
 					ParamUtil.getBoolean(actionRequest, "rewritePages")
 				).put(
 					"sourceGroupId", sourceGroup.getGroupId()
+				).put(
+					"titleObjectFieldNames",
+					ParamUtil.getString(actionRequest, "titleObjectFieldNames")
 				).build(),
 				ServiceContextFactory.getInstance(actionRequest));
 

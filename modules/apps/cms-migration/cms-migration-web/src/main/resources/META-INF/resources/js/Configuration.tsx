@@ -36,6 +36,12 @@ const CONTENT_TYPES = [
 		name: 'migrateFileEntries',
 	},
 	{
+		defaultChecked: false,
+		help: Liferay.Language.get('cms-migration-object-entries-help'),
+		label: Liferay.Language.get('objects'),
+		name: 'migrateObjectEntries',
+	},
+	{
 		help: Liferay.Language.get('cms-migration-rewrite-pages-help'),
 		label: Liferay.Language.get('cms-migration-rewrite-pages'),
 		name: 'rewritePages',
@@ -204,6 +210,30 @@ export default function Configuration({
 								</ClayForm.Group>
 							)
 						)}
+
+						<ClayForm.Group>
+							<label
+								htmlFor={`${portletNamespace}titleObjectFieldNames`}
+							>
+								{Liferay.Language.get(
+									'cms-migration-title-object-field-names'
+								)}
+							</label>
+
+							<ClayInput
+								id={`${portletNamespace}titleObjectFieldNames`}
+								name={`${portletNamespace}titleObjectFieldNames`}
+								type="text"
+							/>
+
+							<ClayForm.FeedbackGroup>
+								<ClayForm.Text>
+									{Liferay.Language.get(
+										'cms-migration-title-object-field-names-help'
+									)}
+								</ClayForm.Text>
+							</ClayForm.FeedbackGroup>
+						</ClayForm.Group>
 					</ClayLayout.SheetSection>
 				</ClayTooltipProvider>
 
