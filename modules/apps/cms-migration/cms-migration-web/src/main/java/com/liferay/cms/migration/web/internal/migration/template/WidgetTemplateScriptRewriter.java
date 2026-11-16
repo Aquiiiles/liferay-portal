@@ -30,7 +30,9 @@ public class WidgetTemplateScriptRewriter {
 	public WidgetTemplateScriptRewriter(JSONFactory jsonFactory)
 		throws Exception {
 
-		for (String fileName : new String[] {"blogs_entry.json"}) {
+		for (String fileName :
+				new String[] {"blogs_entry.json", "journal_article.json"}) {
+
 			JSONObject jsonObject = jsonFactory.createJSONObject(
 				StringUtil.read(
 					WidgetTemplateScriptRewriter.class,
@@ -56,6 +58,18 @@ public class WidgetTemplateScriptRewriter {
 			return script;
 		}
 
+		for (int i = 0; i < replacementsJSONArray.length(); i++) {
+			JSONObject replacementJSONObject =
+				replacementsJSONArray.getJSONObject(i);
+
+			String from = replacementJSONObject.getString("from");
+
+			if (!from.contains(_PLACEHOLDER)) {
+				script = StringUtil.replace(
+					script, from, replacementJSONObject.getString("to"));
+			}
+		}
+
 		Set<String> variableNames = new LinkedHashSet<>();
 
 		Matcher matcher = _variablePattern.matcher(script);
@@ -77,9 +91,14 @@ public class WidgetTemplateScriptRewriter {
 				JSONObject replacementJSONObject =
 					replacementsJSONArray.getJSONObject(i);
 
-				String from = StringUtil.replace(
-					replacementJSONObject.getString("from"), _PLACEHOLDER,
-					expression);
+				String from = replacementJSONObject.getString("from");
+
+				if (!from.contains(_PLACEHOLDER)) {
+					continue;
+				}
+
+				from = StringUtil.replace(from, _PLACEHOLDER, expression);
+
 				String to = Matcher.quoteReplacement(
 					StringUtil.replace(
 						replacementJSONObject.getString("to"), _PLACEHOLDER,
@@ -97,9 +116,9 @@ public class WidgetTemplateScriptRewriter {
 			}
 		}
 
-		for (String variableName : variableNames) {
+		for (String expression : expressions) {
 			Pattern pattern = Pattern.compile(
-				_BOUNDARY + Pattern.quote(variableName) + "\\.(\\w+)\\(");
+				_BOUNDARY + Pattern.quote(expression) + "\\.(\\w+)\\(");
 
 			matcher = pattern.matcher(script);
 

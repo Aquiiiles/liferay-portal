@@ -2148,11 +2148,12 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			_group.getGroupId(),
 			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
 
-		String script =
-			"<#list entries as curEntry>${curEntry.getAssetRenderer()." +
-				"getArticle().getArticleId()}</#list>";
-
-		DDMTemplate ddmTemplate = _addWidgetTemplate(script);
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign article = ",
+				"curEntry.getAssetRenderer().getArticle() />",
+				"${article.getTitle(locale)}|${article.getUrlTitle()}|",
+				"${article.getArticleId()}</#list>"));
 
 		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
 
@@ -2196,13 +2197,85 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 					ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
 					ddmTemplate.getTemplateId(), ", key ",
 					ddmTemplate.getTemplateKey(),
-					"), which reads Web Content or Blogs APIs and must be ",
-					"adapted to object entries")));
+					"), which calls getArticleId on web content articles")));
 
 		ddmTemplate = _ddmTemplateLocalService.getTemplate(
 			ddmTemplate.getTemplateId());
 
-		Assert.assertEquals(script, ddmTemplate.getScript());
+		Assert.assertEquals(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign article = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${article.getTitleValue(locale.toString())}|",
+				"${(article.getURLTitle(locale)!\"\")}|",
+				"${article.getArticleId()}</#list>"),
+			ddmTemplate.getScript());
+	}
+
+	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateRenderingWebContent()
+		throws Exception {
+
+		String description = RandomTestUtil.randomString();
+		String title = RandomTestUtil.randomString();
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			JournalArticleConstants.CLASS_NAME_ID_DEFAULT, title, description,
+			RandomTestUtil.randomString(), LocaleUtil.getSiteDefault(), false,
+			true,
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign article = ",
+				"curEntry.getAssetRenderer().getArticle() />",
+				"${article.getTitle(locale)}|",
+				"${article.getDescription(locale)}</#list>"));
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(JournalArticle.class))
+				}
+			).put(
+				"anyClassTypeJournalArticleAssetRendererFactory",
+				new String[] {
+					String.valueOf(journalArticle.getDDMStructureId())
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertFalse(
+			statusMessage, statusMessage.contains("must be adapted"));
+
+		Assert.assertEquals(
+			title + StringPool.PIPE + description,
+			_renderAssetPublisherWidgetTemplate(
+				layout, _getObjectEntry(journalArticle),
+				ddmTemplate.getTemplateKey()));
 	}
 
 	@Test
@@ -3647,9 +3720,17 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			BlogsEntry blogsEntry, Layout layout, String templateKey)
 		throws Exception {
 
-		ObjectEntry objectEntry = _getObjectEntry(
-			"CMS_MIGRATION_BLOGS_ENTRY",
-			"CMS_MIGRATION_BLOGS_ENTRY_" + blogsEntry.getEntryId());
+		return _renderAssetPublisherWidgetTemplate(
+			layout,
+			_getObjectEntry(
+				"CMS_MIGRATION_BLOGS_ENTRY",
+				"CMS_MIGRATION_BLOGS_ENTRY_" + blogsEntry.getEntryId()),
+			templateKey);
+	}
+
+	private String _renderAssetPublisherWidgetTemplate(
+			Layout layout, ObjectEntry objectEntry, String templateKey)
+		throws Exception {
 
 		Map<String, Object> contextObjects = new HashMap<>();
 

@@ -12,6 +12,7 @@ import com.liferay.cms.migration.web.internal.migration.CMSMigrationContext;
 import com.liferay.dynamic.data.mapping.constants.DDMTemplateConstants;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
 import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalService;
+import com.liferay.journal.model.JournalArticle;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
@@ -26,6 +27,7 @@ import com.liferay.portlet.display.template.PortletDisplayTemplate;
 import jakarta.portlet.PortletPreferences;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -98,54 +100,76 @@ public class WidgetTemplateMigrator {
 
 		String script = ddmTemplate.getScript();
 
-		boolean blogsEntryListed = _isBlogsEntryListed(
-			cmsMigrationContext, portletPreferences);
+		boolean blogsEntryListed = _isListed(
+			BlogsEntry.class.getName(), cmsMigrationContext,
+			portletPreferences);
+		boolean journalArticleListed = _isListed(
+			JournalArticle.class.getName(), cmsMigrationContext,
+			portletPreferences);
 
-		if (blogsEntryListed &&
-			CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
+		boolean migrated = false;
 
-			script = _migrateBlogsEntryWidgetTemplate(
-				cmsMigrationContext, ddmTemplate, label);
+		if (CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate) &&
+			(blogsEntryListed != journalArticleListed)) {
+
+			if (blogsEntryListed) {
+				script = _migrateBlogsEntryWidgetTemplate(
+					cmsMigrationContext, ddmTemplate, label);
+			}
+			else {
+				script = _migrateJournalArticleWidgetTemplate(
+					cmsMigrationContext, ddmTemplate, label);
+			}
+
+			migrated = true;
 		}
 
-		_warnUnsupportedAPIs(
-			blogsEntryListed, cmsMigrationContext, label, script);
+		_warnUnsupportedAPIs(cmsMigrationContext, label, migrated, script);
 	}
 
-	private boolean _isBlogsEntryListed(
-		CMSMigrationContext cmsMigrationContext,
+	private boolean _isListed(
+		String className, CMSMigrationContext cmsMigrationContext,
 		PortletPreferences portletPreferences) {
 
-		ObjectDefinition objectDefinition =
-			cmsMigrationContext.getObjectDefinition(
-				BlogsEntry.class.getName(), 0);
+		Map<String, ObjectDefinition> objectDefinitions =
+			cmsMigrationContext.getObjectDefinitions();
 
-		if (objectDefinition == null) {
-			return false;
-		}
+		for (Map.Entry<String, ObjectDefinition> entry :
+				objectDefinitions.entrySet()) {
 
-		if (ArrayUtil.contains(
-				portletPreferences.getValues("classNameIds", new String[0]),
-				String.valueOf(
-					_portal.getClassNameId(objectDefinition.getClassName())))) {
+			String key = entry.getKey();
 
-			return true;
-		}
+			if (!key.startsWith(className + StringPool.POUND)) {
+				continue;
+			}
 
-		for (String assetEntryXml :
-				portletPreferences.getValues("assetEntryXml", new String[0])) {
+			ObjectDefinition objectDefinition = entry.getValue();
 
-			if (assetEntryXml.contains(objectDefinition.getClassName())) {
+			if (ArrayUtil.contains(
+					portletPreferences.getValues("classNameIds", new String[0]),
+					String.valueOf(
+						_portal.getClassNameId(
+							objectDefinition.getClassName())))) {
+
 				return true;
+			}
+
+			for (String assetEntryXml :
+					portletPreferences.getValues(
+						"assetEntryXml", new String[0])) {
+
+				if (assetEntryXml.contains(objectDefinition.getClassName())) {
+					return true;
+				}
 			}
 		}
 
 		return false;
 	}
 
-	private String _migrateBlogsEntryWidgetTemplate(
-			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
-			String label)
+	private String _migrate(
+			String className, CMSMigrationContext cmsMigrationContext,
+			String contentName, DDMTemplate ddmTemplate, String label)
 		throws Exception {
 
 		String script = ddmTemplate.getScript();
@@ -153,7 +177,7 @@ public class WidgetTemplateMigrator {
 		Set<String> unsupportedMethodNames = new LinkedHashSet<>();
 
 		String rewrittenScript = _widgetTemplateScriptRewriter.rewrite(
-			BlogsEntry.class.getName(), script, unsupportedMethodNames);
+			className, script, unsupportedMethodNames);
 
 		if (!rewrittenScript.equals(script)) {
 			_ddmTemplateLocalService.updateTemplate(
@@ -166,7 +190,8 @@ public class WidgetTemplateMigrator {
 
 			cmsMigrationContext.getCMSMigrationReport(
 			).addWarning(
-				label + "was changed to read the migrated blog entries"
+				StringBundler.concat(
+					label, "was changed to read the migrated ", contentName)
 			);
 		}
 
@@ -177,21 +202,44 @@ public class WidgetTemplateMigrator {
 					label, "calls ",
 					StringUtil.merge(
 						unsupportedMethodNames, StringPool.COMMA_AND_SPACE),
-					" on blog entries, which object entries do not support, ",
-					"so it must be adapted to object entries")
+					" on ", contentName,
+					", which object entries do not support, so it must be ",
+					"adapted to object entries")
 			);
 		}
 
 		return rewrittenScript;
 	}
 
-	private void _warnUnsupportedAPIs(
-		boolean blogsEntryListed, CMSMigrationContext cmsMigrationContext,
-		String label, String script) {
+	private String _migrateBlogsEntryWidgetTemplate(
+			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
+			String label)
+		throws Exception {
 
-		if ((!blogsEntryListed && script.contains(".getAssetObject()")) ||
-			script.contains("BlogsEntry") || script.contains("getArticle") ||
-			script.contains("getDocument") ||
+		return _migrate(
+			BlogsEntry.class.getName(), cmsMigrationContext, "blog entries",
+			ddmTemplate, label);
+	}
+
+	private String _migrateJournalArticleWidgetTemplate(
+			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
+			String label)
+		throws Exception {
+
+		return _migrate(
+			JournalArticle.class.getName(), cmsMigrationContext,
+			"web content articles", ddmTemplate, label);
+	}
+
+	private void _warnUnsupportedAPIs(
+		CMSMigrationContext cmsMigrationContext, String label, boolean migrated,
+		String script) {
+
+		if ((!migrated &&
+			 (script.contains(".getAssetObject()") ||
+			  script.contains("getArticle") ||
+			  script.contains("getDocument"))) ||
+			script.contains("BlogsEntry") ||
 			script.contains("JournalArticle") ||
 			script.contains("serviceLocator")) {
 

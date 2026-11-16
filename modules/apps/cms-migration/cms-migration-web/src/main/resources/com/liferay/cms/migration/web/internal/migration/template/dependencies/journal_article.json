@@ -1,0 +1,45 @@
+{
+	"className": "com.liferay.journal.model.JournalArticle",
+	"replacements": [
+		{
+			"from": ".getArticle()",
+			"to": ".getAssetObject()"
+		},
+		{
+			"from": "[$ENTRY$].getDescription()",
+			"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getDescription(locale)",
+			"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getDescriptionCurrentValue()",
+			"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getResourcePrimKey()",
+			"to": "[$ENTRY$].getObjectEntryId()"
+		},
+		{
+			"from": "[$ENTRY$].getTitle()",
+			"to": "[$ENTRY$].getTitleValue(locale.toString())"
+		},
+		{
+			"from": "[$ENTRY$].getTitle(locale)",
+			"to": "[$ENTRY$].getTitleValue(locale.toString())"
+		},
+		{
+			"from": "[$ENTRY$].getTitleCurrentValue()",
+			"to": "[$ENTRY$].getTitleValue(locale.toString())"
+		},
+		{
+			"from": "[$ENTRY$].getUrlTitle()",
+			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getUrlTitle(locale)",
+			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+		}
+	]
+}
