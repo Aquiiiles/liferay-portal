@@ -2141,6 +2141,77 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 	}
 
 	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateInAnotherSite()
+		throws Exception {
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		_anotherGroup = GroupTestUtil.addGroup();
+
+		String script = StringBundler.concat(
+			"<#assign journalArticleLocalService = ",
+			"serviceLocator.findService(\"com.liferay.journal.service.",
+			"JournalArticleLocalService\") /><#list entries as curEntry>",
+			"<#assign article = journalArticleLocalService.fetchLatestArticle(",
+			"curEntry.getClassPK()) />${article.getTitle(locale)}</#list>");
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			_anotherGroup.getGroupId(), script);
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(JournalArticle.class))
+				}
+			).put(
+				"anyClassTypeJournalArticleAssetRendererFactory",
+				new String[] {
+					String.valueOf(journalArticle.getDDMStructureId())
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_anotherGroup.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				StringBundler.concat(
+					"uses the widget template ",
+					ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
+					ddmTemplate.getTemplateId(), ", key ",
+					ddmTemplate.getTemplateKey(),
+					"), which reads Web Content or Blogs APIs and must be ",
+					"adapted to object entries")));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		Assert.assertEquals(script, ddmTemplate.getScript());
+	}
+
+	@Test
 	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateReadingWebContent()
 		throws Exception {
 
@@ -3256,17 +3327,23 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			_group.getGroupId(), JournalArticle.class.getName(), ddmForm);
 	}
 
-	private DDMTemplate _addWidgetTemplate(String script) throws Exception {
+	private DDMTemplate _addWidgetTemplate(long groupId, String script)
+		throws Exception {
+
 		return _ddmTemplateLocalService.addTemplate(
-			RandomTestUtil.randomString(), TestPropsValues.getUserId(),
-			_group.getGroupId(), _portal.getClassNameId(AssetEntry.class), 0,
+			RandomTestUtil.randomString(), TestPropsValues.getUserId(), groupId,
+			_portal.getClassNameId(AssetEntry.class), 0,
 			_portal.getClassNameId(PortletDisplayTemplate.class),
 			HashMapBuilder.put(
 				LocaleUtil.getSiteDefault(), RandomTestUtil.randomString()
 			).build(),
 			null, DDMTemplateConstants.TEMPLATE_TYPE_DISPLAY, StringPool.BLANK,
 			TemplateConstants.LANG_TYPE_FTL, script,
-			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+			ServiceContextTestUtil.getServiceContext(groupId));
+	}
+
+	private DDMTemplate _addWidgetTemplate(String script) throws Exception {
+		return _addWidgetTemplate(_group.getGroupId(), script);
 	}
 
 	private void _assertPortletPermissions(
@@ -3852,6 +3929,9 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 
 	private static final String _PID_DL_CONFIGURATION =
 		"com.liferay.document.library.configuration.DLConfiguration";
+
+	@DeleteAfterTestRun
+	private Group _anotherGroup;
 
 	@Inject
 	private AssetEntryLocalService _assetEntryLocalService;

@@ -217,6 +217,34 @@ public class PortletReferenceRewriter {
 		return preferences;
 	}
 
+	private long _getDisplayStyleGroupId(
+		CMSMigrationContext cmsMigrationContext,
+		PortletPreferences portletPreferences) {
+
+		String displayStyleGroupExternalReferenceCode =
+			portletPreferences.getValue(
+				"displayStyleGroupExternalReferenceCode", null);
+
+		if (Validator.isNotNull(displayStyleGroupExternalReferenceCode)) {
+			Group group = _groupLocalService.fetchGroupByExternalReferenceCode(
+				displayStyleGroupExternalReferenceCode,
+				cmsMigrationContext.getCompanyId());
+
+			if (group != null) {
+				return group.getGroupId();
+			}
+		}
+
+		long displayStyleGroupId = GetterUtil.getLong(
+			portletPreferences.getValue("displayStyleGroupId", null));
+
+		if (displayStyleGroupId > 0) {
+			return displayStyleGroupId;
+		}
+
+		return cmsMigrationContext.getSourceGroupId();
+	}
+
 	private JournalArticle _getJournalArticle(
 		Layout layout, PortletPreferences portletPreferences) {
 
@@ -734,7 +762,10 @@ public class PortletReferenceRewriter {
 				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX)) {
 
 			_widgetTemplateMigrator.addWidgetTemplate(
-				cmsMigrationContext, displayStyle, label);
+				cmsMigrationContext, displayStyle,
+				_getDisplayStyleGroupId(
+					cmsMigrationContext, portletPreferences),
+				label);
 		}
 		else if (displayStyle.equals("abstracts") ||
 				 displayStyle.equals("full-content")) {

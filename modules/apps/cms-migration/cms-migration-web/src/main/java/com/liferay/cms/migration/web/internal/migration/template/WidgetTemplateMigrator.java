@@ -73,13 +73,13 @@ public class WidgetTemplateMigrator {
 
 	public void addWidgetTemplate(
 		CMSMigrationContext cmsMigrationContext, String displayStyle,
-		String label) {
+		long displayStyleGroupId, String label) {
 
 		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
-			cmsMigrationContext.getSourceGroupId(),
-			_portal.getClassNameId(AssetEntry.class),
+			displayStyleGroupId, _portal.getClassNameId(AssetEntry.class),
 			displayStyle.substring(
-				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length()));
+				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length()),
+			true);
 
 		if (ddmTemplate == null) {
 			return;
@@ -338,7 +338,10 @@ public class WidgetTemplateMigrator {
 
 		String sourceClassName = null;
 
-		if (CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
+		if (CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate) &&
+			(ddmTemplate.getGroupId() ==
+				cmsMigrationContext.getSourceGroupId())) {
+
 			sourceClassName = _getSourceClassName(
 				cmsMigrationContext, ddmTemplate);
 		}
