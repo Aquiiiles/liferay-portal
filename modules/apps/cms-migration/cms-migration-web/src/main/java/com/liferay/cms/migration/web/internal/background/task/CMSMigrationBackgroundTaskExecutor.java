@@ -34,7 +34,7 @@ import com.liferay.cms.migration.web.internal.migration.reference.PortletReferen
 import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigationMenuItemReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.structure.ObjectDefinitionMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
-import com.liferay.cms.migration.web.internal.migration.template.TemplateMigrator;
+import com.liferay.cms.migration.web.internal.migration.template.JournalTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateScriptRewriter;
 import com.liferay.depot.model.DepotEntry;
@@ -299,17 +299,18 @@ public class CMSMigrationBackgroundTaskExecutor
 				_layoutPageTemplateStructureLocalService,
 				_layoutPageTemplateStructureRelLocalService);
 
-		TemplateMigrator templateMigrator = new TemplateMigrator(
-			_ddmTemplateLocalService, infoItemReferenceMapper, _portal,
-			_templateEntryLocalService);
+		JournalTemplateMigrator journalTemplateMigrator =
+			new JournalTemplateMigrator(
+				_ddmTemplateLocalService, infoItemReferenceMapper, _portal,
+				_templateEntryLocalService);
 
 		DisplayPageTemplateMigrator displayPageTemplateMigrator =
 			new DisplayPageTemplateMigrator(
 				_assetDisplayPageEntryLocalService, _ddmStructureLocalService,
 				_dlFileEntryTypeLocalService, infoItemReferenceMapper,
-				_layoutLocalService, _layoutPageTemplateEntryLocalService,
-				layoutReferenceRewriter, objectDefinitionMigrator, _portal,
-				templateMigrator);
+				journalTemplateMigrator, _layoutLocalService,
+				_layoutPageTemplateEntryLocalService, layoutReferenceRewriter,
+				objectDefinitionMigrator, _portal);
 
 		AttachmentAlternativeTextWriter attachmentAlternativeTextWriter =
 			new AttachmentAlternativeTextWriter(_dlAppLocalService);
@@ -365,11 +366,11 @@ public class CMSMigrationBackgroundTaskExecutor
 			blogsEntryMigrator, cmsMigrationBackgroundTaskStatusMessageSender,
 			_depotEntryGroupRelLocalService, displayPageTemplateMigrator,
 			fileEntryMigrator, folderMigrator, _groupLocalService,
-			htmlReferenceRewriter, journalArticleMigrator, _layoutLocalService,
+			htmlReferenceRewriter, journalArticleMigrator,
+			journalTemplateMigrator, _layoutLocalService,
 			layoutReferenceRewriter, _objectDefinitionLocalService,
 			_objectEntryLocalService, _objectFieldLocalService,
-			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter,
-			templateMigrator);
+			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter);
 	}
 
 	@Reference

@@ -19,7 +19,7 @@ import com.liferay.cms.migration.web.internal.migration.reference.LayoutReferenc
 import com.liferay.cms.migration.web.internal.migration.reference.PortletReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigationMenuItemReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
-import com.liferay.cms.migration.web.internal.migration.template.TemplateMigrator;
+import com.liferay.cms.migration.web.internal.migration.template.JournalTemplateMigrator;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.object.constants.ObjectFieldConstants;
@@ -70,6 +70,7 @@ public class CMSMigrationManager {
 		GroupLocalService groupLocalService,
 		HTMLReferenceRewriter htmlReferenceRewriter,
 		JournalArticleMigrator journalArticleMigrator,
+		JournalTemplateMigrator journalTemplateMigrator,
 		LayoutLocalService layoutLocalService,
 		LayoutReferenceRewriter layoutReferenceRewriter,
 		ObjectDefinitionLocalService objectDefinitionLocalService,
@@ -77,8 +78,7 @@ public class CMSMigrationManager {
 		ObjectFieldLocalService objectFieldLocalService,
 		PortletReferenceRewriter portletReferenceRewriter,
 		SiteNavigationMenuItemReferenceRewriter
-			siteNavigationMenuItemReferenceRewriter,
-		TemplateMigrator templateMigrator) {
+			siteNavigationMenuItemReferenceRewriter) {
 
 		_assetEntryLocalService = assetEntryLocalService;
 		_assetListEntryReferenceRewriter = assetListEntryReferenceRewriter;
@@ -92,6 +92,7 @@ public class CMSMigrationManager {
 		_groupLocalService = groupLocalService;
 		_htmlReferenceRewriter = htmlReferenceRewriter;
 		_journalArticleMigrator = journalArticleMigrator;
+		_journalTemplateMigrator = journalTemplateMigrator;
 		_layoutLocalService = layoutLocalService;
 		_layoutReferenceRewriter = layoutReferenceRewriter;
 		_objectDefinitionLocalService = objectDefinitionLocalService;
@@ -100,7 +101,6 @@ public class CMSMigrationManager {
 		_portletReferenceRewriter = portletReferenceRewriter;
 		_siteNavigationMenuItemReferenceRewriter =
 			siteNavigationMenuItemReferenceRewriter;
-		_templateMigrator = templateMigrator;
 	}
 
 	public void migrate(CMSMigrationContext cmsMigrationContext)
@@ -177,7 +177,7 @@ public class CMSMigrationManager {
 				cmsMigrationContext.getDDMStructures(
 				).size());
 
-			_templateMigrator.migrate(cmsMigrationContext);
+			_journalTemplateMigrator.migrate(cmsMigrationContext);
 		}
 
 		if (!cmsMigrationContext.isRewritePages()) {
@@ -427,6 +427,7 @@ public class CMSMigrationManager {
 	private final GroupLocalService _groupLocalService;
 	private final HTMLReferenceRewriter _htmlReferenceRewriter;
 	private final JournalArticleMigrator _journalArticleMigrator;
+	private final JournalTemplateMigrator _journalTemplateMigrator;
 	private final LayoutLocalService _layoutLocalService;
 	private final LayoutReferenceRewriter _layoutReferenceRewriter;
 	private final ObjectDefinitionLocalService _objectDefinitionLocalService;
@@ -435,6 +436,5 @@ public class CMSMigrationManager {
 	private final PortletReferenceRewriter _portletReferenceRewriter;
 	private final SiteNavigationMenuItemReferenceRewriter
 		_siteNavigationMenuItemReferenceRewriter;
-	private final TemplateMigrator _templateMigrator;
 
 }

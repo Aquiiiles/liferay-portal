@@ -54,23 +54,23 @@ public class DisplayPageTemplateMigrator {
 		DDMStructureLocalService ddmStructureLocalService,
 		DLFileEntryTypeLocalService dlFileEntryTypeLocalService,
 		InfoItemReferenceMapper infoItemReferenceMapper,
+		JournalTemplateMigrator journalTemplateMigrator,
 		LayoutLocalService layoutLocalService,
 		LayoutPageTemplateEntryLocalService layoutPageTemplateEntryLocalService,
 		LayoutReferenceRewriter layoutReferenceRewriter,
-		ObjectDefinitionMigrator objectDefinitionMigrator, Portal portal,
-		TemplateMigrator templateMigrator) {
+		ObjectDefinitionMigrator objectDefinitionMigrator, Portal portal) {
 
 		_assetDisplayPageEntryLocalService = assetDisplayPageEntryLocalService;
 		_ddmStructureLocalService = ddmStructureLocalService;
 		_dlFileEntryTypeLocalService = dlFileEntryTypeLocalService;
 		_infoItemReferenceMapper = infoItemReferenceMapper;
+		_journalTemplateMigrator = journalTemplateMigrator;
 		_layoutLocalService = layoutLocalService;
 		_layoutPageTemplateEntryLocalService =
 			layoutPageTemplateEntryLocalService;
 		_layoutReferenceRewriter = layoutReferenceRewriter;
 		_objectDefinitionMigrator = objectDefinitionMigrator;
 		_portal = portal;
-		_templateMigrator = templateMigrator;
 	}
 
 	public void migrate(CMSMigrationContext cmsMigrationContext) {
@@ -192,7 +192,7 @@ public class DisplayPageTemplateMigrator {
 		// A structure without content is registered here, after the
 		// templates phase, so its templates are migrated now
 
-		_templateMigrator.migrate(cmsMigrationContext, ddmStructure);
+		_journalTemplateMigrator.migrate(cmsMigrationContext, ddmStructure);
 
 		return new ReferenceScope(
 			ddmStructure, objectDefinition, sourceClassName);
@@ -375,12 +375,12 @@ public class DisplayPageTemplateMigrator {
 	private final DDMStructureLocalService _ddmStructureLocalService;
 	private final DLFileEntryTypeLocalService _dlFileEntryTypeLocalService;
 	private final InfoItemReferenceMapper _infoItemReferenceMapper;
+	private final JournalTemplateMigrator _journalTemplateMigrator;
 	private final LayoutLocalService _layoutLocalService;
 	private final LayoutPageTemplateEntryLocalService
 		_layoutPageTemplateEntryLocalService;
 	private final LayoutReferenceRewriter _layoutReferenceRewriter;
 	private final ObjectDefinitionMigrator _objectDefinitionMigrator;
 	private final Portal _portal;
-	private final TemplateMigrator _templateMigrator;
 
 }

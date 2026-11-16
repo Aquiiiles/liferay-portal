@@ -51,9 +51,9 @@ import java.util.regex.Pattern;
  *
  * @author Lino Alves
  */
-public class TemplateMigrator {
+public class JournalTemplateMigrator {
 
-	public TemplateMigrator(
+	public JournalTemplateMigrator(
 		DDMTemplateLocalService ddmTemplateLocalService,
 		InfoItemReferenceMapper infoItemReferenceMapper, Portal portal,
 		TemplateEntryLocalService templateEntryLocalService) {
