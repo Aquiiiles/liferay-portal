@@ -20,6 +20,7 @@ import com.liferay.cms.migration.web.internal.migration.reference.PortletReferen
 import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigationMenuItemReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.JournalTemplateMigrator;
+import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.object.constants.ObjectFieldConstants;
@@ -78,7 +79,8 @@ public class CMSMigrationManager {
 		ObjectFieldLocalService objectFieldLocalService,
 		PortletReferenceRewriter portletReferenceRewriter,
 		SiteNavigationMenuItemReferenceRewriter
-			siteNavigationMenuItemReferenceRewriter) {
+			siteNavigationMenuItemReferenceRewriter,
+		WidgetTemplateMigrator widgetTemplateMigrator) {
 
 		_assetEntryLocalService = assetEntryLocalService;
 		_assetListEntryReferenceRewriter = assetListEntryReferenceRewriter;
@@ -101,6 +103,7 @@ public class CMSMigrationManager {
 		_portletReferenceRewriter = portletReferenceRewriter;
 		_siteNavigationMenuItemReferenceRewriter =
 			siteNavigationMenuItemReferenceRewriter;
+		_widgetTemplateMigrator = widgetTemplateMigrator;
 	}
 
 	public void migrate(CMSMigrationContext cmsMigrationContext)
@@ -187,6 +190,8 @@ public class CMSMigrationManager {
 		Group sourceGroup = cmsMigrationContext.getSourceGroup();
 
 		if (!sourceGroup.isCompany()) {
+			_widgetTemplateMigrator.migrate(cmsMigrationContext);
+
 			return;
 		}
 
@@ -213,6 +218,8 @@ public class CMSMigrationManager {
 		finally {
 			cmsMigrationContext.setRewriteGroup(sourceGroup);
 		}
+
+		_widgetTemplateMigrator.migrate(cmsMigrationContext);
 	}
 
 	private List<Layout> _getLayouts(long groupId) {
@@ -434,5 +441,6 @@ public class CMSMigrationManager {
 	private final PortletReferenceRewriter _portletReferenceRewriter;
 	private final SiteNavigationMenuItemReferenceRewriter
 		_siteNavigationMenuItemReferenceRewriter;
+	private final WidgetTemplateMigrator _widgetTemplateMigrator;
 
 }

@@ -91,6 +91,7 @@ import com.liferay.portal.kernel.security.permission.ResourceActions;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.service.ImageLocalService;
 import com.liferay.portal.kernel.service.LayoutLocalService;
+import com.liferay.portal.kernel.service.PortletPreferenceValueLocalService;
 import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
 import com.liferay.portal.kernel.service.ResourceLocalService;
 import com.liferay.portal.kernel.service.ResourcePermissionLocalService;
@@ -341,6 +342,13 @@ public class CMSMigrationBackgroundTaskExecutor
 				_journalArticleResourceLocalService, _jsonFactory, _language,
 				objectDefinitionMigrator, objectEntryWriter);
 
+		WidgetTemplateMigrator widgetTemplateMigrator =
+			new WidgetTemplateMigrator(
+				_ddmTemplateLocalService, _portal,
+				_portletPreferencesLocalService,
+				_portletPreferenceValueLocalService, _saxReader,
+				new WidgetTemplateScriptRewriter(_jsonFactory));
+
 		PortletReferenceRewriter portletReferenceRewriter =
 			new PortletReferenceRewriter(
 				_assetEntryLocalService, _assetPublisherHelper,
@@ -349,10 +357,7 @@ public class CMSMigrationBackgroundTaskExecutor
 				_journalArticleLocalService, _jsonFactory, _layoutLocalService,
 				_portal, _portletPreferencesLocalService, _resourceActions,
 				_resourceLocalService, _resourcePermissionLocalService,
-				_saxReader,
-				new WidgetTemplateMigrator(
-					_ddmTemplateLocalService, _portal,
-					new WidgetTemplateScriptRewriter(_jsonFactory)));
+				_saxReader, widgetTemplateMigrator);
 
 		SiteNavigationMenuItemReferenceRewriter
 			siteNavigationMenuItemReferenceRewriter =
@@ -370,7 +375,8 @@ public class CMSMigrationBackgroundTaskExecutor
 			journalTemplateMigrator, _layoutLocalService,
 			layoutReferenceRewriter, _objectDefinitionLocalService,
 			_objectEntryLocalService, _objectFieldLocalService,
-			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter);
+			portletReferenceRewriter, siteNavigationMenuItemReferenceRewriter,
+			widgetTemplateMigrator);
 	}
 
 	@Reference
@@ -529,6 +535,10 @@ public class CMSMigrationBackgroundTaskExecutor
 
 	@Reference
 	private Portal _portal;
+
+	@Reference
+	private PortletPreferenceValueLocalService
+		_portletPreferenceValueLocalService;
 
 	@Reference
 	private PortletPreferencesLocalService _portletPreferencesLocalService;

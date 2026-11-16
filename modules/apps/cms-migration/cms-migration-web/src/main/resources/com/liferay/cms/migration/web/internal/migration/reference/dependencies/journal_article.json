@@ -1,4 +1,10 @@
 {
+	"changedMethodNames": [
+		"getExternalReferenceCode",
+		"getGroupId",
+		"getModelClassName",
+		"getUuid"
+	],
 	"className": "com.liferay.journal.model.JournalArticle",
 	"replacements": [
 		{
@@ -41,5 +47,10 @@
 			"from": "[$ENTRY$].getUrlTitle(locale)",
 			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
 		}
+	],
+	"unsupportedReferences": [
+		"JournalArticleLocalService",
+		"JournalArticleService",
+		"com.liferay.journal.model.JournalArticle"
 	]
 }

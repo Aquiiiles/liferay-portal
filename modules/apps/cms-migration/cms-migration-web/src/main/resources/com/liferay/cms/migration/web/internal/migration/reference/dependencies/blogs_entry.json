@@ -1,4 +1,10 @@
 {
+	"changedMethodNames": [
+		"getExternalReferenceCode",
+		"getGroupId",
+		"getModelClassName",
+		"getUuid"
+	],
 	"className": "com.liferay.blogs.model.BlogsEntry",
 	"replacements": [
 		{
@@ -37,5 +43,10 @@
 			"from": "[$ENTRY$].getUrlTitle()",
 			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
 		}
+	],
+	"unsupportedReferences": [
+		"BlogsEntryLocalService",
+		"BlogsEntryService",
+		"com.liferay.blogs.model.BlogsEntry"
 	]
 }

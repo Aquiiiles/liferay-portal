@@ -11,6 +11,7 @@ import com.liferay.petra.string.StringPool;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 
 import java.lang.reflect.Method;
@@ -38,9 +39,7 @@ public class WidgetTemplateScriptRewriter {
 					WidgetTemplateScriptRewriter.class,
 					"dependencies/" + fileName));
 
-			_replacementsJSONArrays.put(
-				jsonObject.getString("className"),
-				jsonObject.getJSONArray("replacements"));
+			_jsonObjects.put(jsonObject.getString("className"), jsonObject);
 		}
 
 		for (Method method : ObjectEntry.class.getMethods()) {
@@ -48,15 +47,19 @@ public class WidgetTemplateScriptRewriter {
 		}
 	}
 
-	public String rewrite(
-		String className, String script, Set<String> unsupportedMethodNames) {
+	public Result rewrite(String className, String script) {
+		Result result = new Result();
 
-		JSONArray replacementsJSONArray = _replacementsJSONArrays.get(
-			className);
+		JSONObject jsonObject = _jsonObjects.get(className);
 
-		if (replacementsJSONArray == null) {
-			return script;
+		if (jsonObject == null) {
+			result._script = script;
+
+			return result;
 		}
+
+		JSONArray replacementsJSONArray = jsonObject.getJSONArray(
+			"replacements");
 
 		for (int i = 0; i < replacementsJSONArray.length(); i++) {
 			JSONObject replacementJSONObject =
@@ -116,6 +119,9 @@ public class WidgetTemplateScriptRewriter {
 			}
 		}
 
+		Set<String> changedMethodNames = JSONUtil.toStringSet(
+			jsonObject.getJSONArray("changedMethodNames"));
+
 		for (String expression : expressions) {
 			Pattern pattern = Pattern.compile(
 				_BOUNDARY + Pattern.quote(expression) + "\\.(\\w+)\\(");
@@ -123,13 +129,56 @@ public class WidgetTemplateScriptRewriter {
 			matcher = pattern.matcher(script);
 
 			while (matcher.find()) {
-				if (!_objectEntryMethodNames.contains(matcher.group(1))) {
-					unsupportedMethodNames.add(matcher.group(1));
+				String methodName = matcher.group(1);
+
+				if (changedMethodNames.contains(methodName)) {
+					result._changedMethodNames.add(methodName);
+				}
+				else if (!_objectEntryMethodNames.contains(methodName)) {
+					result._unsupportedMethodNames.add(methodName);
 				}
 			}
 		}
 
-		return script;
+		for (String unsupportedReference :
+				JSONUtil.toStringList(
+					jsonObject.getJSONArray("unsupportedReferences"))) {
+
+			if (script.contains(unsupportedReference)) {
+				result._unsupportedReferences.add(unsupportedReference);
+			}
+		}
+
+		result._script = script;
+
+		return result;
+	}
+
+	public static class Result {
+
+		public Set<String> getChangedMethodNames() {
+			return _changedMethodNames;
+		}
+
+		public String getScript() {
+			return _script;
+		}
+
+		public Set<String> getUnsupportedMethodNames() {
+			return _unsupportedMethodNames;
+		}
+
+		public Set<String> getUnsupportedReferences() {
+			return _unsupportedReferences;
+		}
+
+		private final Set<String> _changedMethodNames = new LinkedHashSet<>();
+		private String _script;
+		private final Set<String> _unsupportedMethodNames =
+			new LinkedHashSet<>();
+		private final Set<String> _unsupportedReferences =
+			new LinkedHashSet<>();
+
 	}
 
 	private String _getPropertyName(String expression, String from) {
@@ -159,8 +208,7 @@ public class WidgetTemplateScriptRewriter {
 		"(\\w+)\\s*=\\s*[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*(?:\\(\\))?)*" +
 			"\\.getAssetObject\\(\\)");
 
+	private final Map<String, JSONObject> _jsonObjects = new HashMap<>();
 	private final Set<String> _objectEntryMethodNames = new LinkedHashSet<>();
-	private final Map<String, JSONArray> _replacementsJSONArrays =
-		new HashMap<>();
 
 }

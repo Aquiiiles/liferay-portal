@@ -6,9 +6,11 @@
 package com.liferay.cms.migration.web.internal.migration.template;
 
 import com.liferay.asset.kernel.model.AssetEntry;
+import com.liferay.asset.publisher.constants.AssetPublisherPortletKeys;
 import com.liferay.blogs.model.BlogsEntry;
 import com.liferay.cms.migration.web.internal.constants.CMSMigrationConstants;
 import com.liferay.cms.migration.web.internal.migration.CMSMigrationContext;
+import com.liferay.cms.migration.web.internal.migration.CMSMigrationReport;
 import com.liferay.cms.migration.web.internal.migration.reference.WidgetTemplateScriptRewriter;
 import com.liferay.dynamic.data.mapping.constants.DDMTemplateConstants;
 import com.liferay.dynamic.data.mapping.model.DDMTemplate;
@@ -17,18 +19,35 @@ import com.liferay.journal.model.JournalArticle;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.petra.string.StringPool;
+import com.liferay.portal.kernel.dao.orm.DynamicQuery;
+import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
+import com.liferay.portal.kernel.model.Group;
+import com.liferay.portal.kernel.model.PortletPreferenceValue;
+import com.liferay.portal.kernel.portlet.PortletIdCodec;
+import com.liferay.portal.kernel.service.PortletPreferenceValueLocalService;
+import com.liferay.portal.kernel.service.PortletPreferencesLocalService;
 import com.liferay.portal.kernel.template.TemplateConstants;
-import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
+import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.xml.Document;
+import com.liferay.portal.kernel.xml.Element;
+import com.liferay.portal.kernel.xml.SAXReader;
 import com.liferay.portlet.display.template.PortletDisplayTemplate;
 
 import jakarta.portlet.PortletPreferences;
 
-import java.util.LinkedHashSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -38,11 +57,39 @@ public class WidgetTemplateMigrator {
 
 	public WidgetTemplateMigrator(
 		DDMTemplateLocalService ddmTemplateLocalService, Portal portal,
+		PortletPreferencesLocalService portletPreferencesLocalService,
+		PortletPreferenceValueLocalService portletPreferenceValueLocalService,
+		SAXReader saxReader,
 		WidgetTemplateScriptRewriter widgetTemplateScriptRewriter) {
 
 		_ddmTemplateLocalService = ddmTemplateLocalService;
 		_portal = portal;
+		_portletPreferencesLocalService = portletPreferencesLocalService;
+		_portletPreferenceValueLocalService =
+			portletPreferenceValueLocalService;
+		_saxReader = saxReader;
 		_widgetTemplateScriptRewriter = widgetTemplateScriptRewriter;
+	}
+
+	public void addWidgetTemplate(
+		CMSMigrationContext cmsMigrationContext, String displayStyle,
+		String label) {
+
+		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
+			cmsMigrationContext.getSourceGroupId(),
+			_portal.getClassNameId(AssetEntry.class),
+			displayStyle.substring(
+				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length()));
+
+		if (ddmTemplate == null) {
+			return;
+		}
+
+		_labels.putIfAbsent(
+			ddmTemplate.getTemplateId(),
+			StringBundler.concat(
+				label, " uses the widget template ",
+				CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ", which "));
 	}
 
 	public String getBlogsWidgetTemplateKey(
@@ -79,58 +126,114 @@ public class WidgetTemplateMigrator {
 		return ddmTemplate.getTemplateKey();
 	}
 
-	public void migrate(
-			CMSMigrationContext cmsMigrationContext, String displayStyle,
-			String label, PortletPreferences portletPreferences)
-		throws Exception {
+	public void migrate(CMSMigrationContext cmsMigrationContext) {
+		CMSMigrationReport cmsMigrationReport =
+			cmsMigrationContext.getCMSMigrationReport();
 
-		String templateKey = displayStyle.substring(
-			PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length());
+		for (Map.Entry<Long, String> entry : _labels.entrySet()) {
+			DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchDDMTemplate(
+				entry.getKey());
 
-		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
-			cmsMigrationContext.getSourceGroupId(),
-			_portal.getClassNameId(AssetEntry.class), templateKey);
-
-		if (ddmTemplate == null) {
-			return;
-		}
-
-		label = StringBundler.concat(
-			label, " uses the widget template ",
-			CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ", which ");
-
-		String script = ddmTemplate.getScript();
-
-		boolean blogsEntryListed = _isListed(
-			BlogsEntry.class.getName(), cmsMigrationContext,
-			portletPreferences);
-		boolean journalArticleListed = _isListed(
-			JournalArticle.class.getName(), cmsMigrationContext,
-			portletPreferences);
-
-		boolean migrated = false;
-
-		if (CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate) &&
-			(blogsEntryListed != journalArticleListed)) {
-
-			if (blogsEntryListed) {
-				script = _migrateBlogsEntryWidgetTemplate(
-					cmsMigrationContext, ddmTemplate, label);
-			}
-			else {
-				script = _migrateJournalArticleWidgetTemplate(
-					cmsMigrationContext, ddmTemplate, label);
+			if (ddmTemplate == null) {
+				continue;
 			}
 
-			migrated = true;
+			try {
+				_migrate(cmsMigrationContext, ddmTemplate, entry.getValue());
+			}
+			catch (Exception exception) {
+				cmsMigrationReport.addError(
+					StringBundler.concat(
+						"Unable to migrate the widget template ",
+						CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ": ",
+						exception.getMessage()));
+			}
 		}
 
-		_warnUnsupportedAPIs(cmsMigrationContext, label, migrated, script);
+		_labels.clear();
 	}
 
-	private boolean _isListed(
-		String className, CMSMigrationContext cmsMigrationContext,
-		PortletPreferences portletPreferences) {
+	private Set<String> _getListedSourceClassNames(
+			PortletPreferences jxPortletPreferences,
+			Map<String, String> sourceClassNames)
+		throws Exception {
+
+		Set<String> listedSourceClassNames = new HashSet<>();
+
+		String selectionStyle = jxPortletPreferences.getValue(
+			"selectionStyle", "dynamic");
+
+		if (selectionStyle.equals("manual")) {
+			for (String assetEntryXml :
+					jxPortletPreferences.getValues(
+						"assetEntryXml", new String[0])) {
+
+				Document document = _saxReader.read(assetEntryXml);
+
+				Element rootElement = document.getRootElement();
+
+				String sourceClassName = sourceClassNames.get(
+					rootElement.elementText("asset-entry-type"));
+
+				if (sourceClassName == null) {
+					return null;
+				}
+
+				listedSourceClassNames.add(sourceClassName);
+			}
+
+			return listedSourceClassNames;
+		}
+
+		String anyAssetType = jxPortletPreferences.getValue(
+			"anyAssetType", "true");
+
+		if (anyAssetType.equals("true")) {
+			return null;
+		}
+
+		String[] classNameIds = {anyAssetType};
+
+		if (anyAssetType.equals("false")) {
+			classNameIds = jxPortletPreferences.getValues(
+				"classNameIds", new String[0]);
+		}
+
+		for (String classNameId : classNameIds) {
+			String sourceClassName = sourceClassNames.get(
+				_portal.getClassName(GetterUtil.getLong(classNameId)));
+
+			if (sourceClassName == null) {
+				return null;
+			}
+
+			listedSourceClassNames.add(sourceClassName);
+		}
+
+		return listedSourceClassNames;
+	}
+
+	private String _getSourceClassName(
+			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate)
+		throws Exception {
+
+		DynamicQuery dynamicQuery =
+			_portletPreferenceValueLocalService.dynamicQuery();
+
+		dynamicQuery.add(
+			RestrictionsFactoryUtil.eq(
+				"companyId", cmsMigrationContext.getCompanyId()));
+		dynamicQuery.add(RestrictionsFactoryUtil.eq("name", "displayStyle"));
+		dynamicQuery.add(
+			RestrictionsFactoryUtil.eq(
+				"smallValue",
+				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+					ddmTemplate.getTemplateKey()));
+
+		List<PortletPreferenceValue> portletPreferenceValues =
+			_portletPreferenceValueLocalService.dynamicQuery(dynamicQuery);
+
+		Map<String, String> sourceClassNames = new HashMap<>();
 
 		Map<String, ObjectDefinition> objectDefinitions =
 			cmsMigrationContext.getObjectDefinitions();
@@ -138,118 +241,236 @@ public class WidgetTemplateMigrator {
 		for (Map.Entry<String, ObjectDefinition> entry :
 				objectDefinitions.entrySet()) {
 
-			String key = entry.getKey();
+			ObjectDefinition objectDefinition = entry.getValue();
 
-			if (!key.startsWith(className + StringPool.POUND)) {
+			sourceClassNames.put(
+				objectDefinition.getClassName(),
+				StringUtil.extractFirst(entry.getKey(), StringPool.POUND));
+		}
+
+		Set<String> listedSourceClassNames = new HashSet<>();
+
+		for (PortletPreferenceValue portletPreferenceValue :
+				portletPreferenceValues) {
+
+			com.liferay.portal.kernel.model.PortletPreferences
+				portletPreferences =
+					_portletPreferencesLocalService.fetchPortletPreferences(
+						portletPreferenceValue.getPortletPreferencesId());
+
+			if ((portletPreferences == null) ||
+				!Objects.equals(
+					PortletIdCodec.decodePortletName(
+						portletPreferences.getPortletId()),
+					AssetPublisherPortletKeys.ASSET_PUBLISHER)) {
+
 				continue;
 			}
 
-			ObjectDefinition objectDefinition = entry.getValue();
+			PortletPreferences jxPortletPreferences =
+				_portletPreferencesLocalService.getPreferences(
+					portletPreferences.getCompanyId(),
+					portletPreferences.getOwnerId(),
+					portletPreferences.getOwnerType(),
+					portletPreferences.getPlid(),
+					portletPreferences.getPortletId());
 
-			if (ArrayUtil.contains(
-					portletPreferences.getValues("classNameIds", new String[0]),
-					String.valueOf(
-						_portal.getClassNameId(
-							objectDefinition.getClassName())))) {
+			if (!_isDisplayStyleGroup(
+					cmsMigrationContext, ddmTemplate, jxPortletPreferences)) {
 
-				return true;
+				continue;
 			}
 
-			for (String assetEntryXml :
-					portletPreferences.getValues(
-						"assetEntryXml", new String[0])) {
+			Set<String> portletListedSourceClassNames =
+				_getListedSourceClassNames(
+					jxPortletPreferences, sourceClassNames);
 
-				if (assetEntryXml.contains(objectDefinition.getClassName())) {
-					return true;
-				}
+			if (portletListedSourceClassNames == null) {
+				return null;
 			}
+
+			listedSourceClassNames.addAll(portletListedSourceClassNames);
 		}
 
-		return false;
+		if (listedSourceClassNames.size() != 1) {
+			return null;
+		}
+
+		Iterator<String> iterator = listedSourceClassNames.iterator();
+
+		return iterator.next();
 	}
 
-	private String _migrate(
+	private boolean _isDisplayStyleGroup(
+		CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
+		PortletPreferences jxPortletPreferences) {
+
+		String displayStyleGroupExternalReferenceCode =
+			jxPortletPreferences.getValue(
+				"displayStyleGroupExternalReferenceCode", null);
+
+		Group sourceGroup = cmsMigrationContext.getSourceGroup();
+
+		if (Validator.isNotNull(displayStyleGroupExternalReferenceCode) &&
+			!Objects.equals(
+				displayStyleGroupExternalReferenceCode,
+				sourceGroup.getExternalReferenceCode())) {
+
+			return false;
+		}
+
+		long displayStyleGroupId = GetterUtil.getLong(
+			jxPortletPreferences.getValue("displayStyleGroupId", null));
+
+		if ((displayStyleGroupId > 0) &&
+			(displayStyleGroupId != ddmTemplate.getGroupId())) {
+
+			return false;
+		}
+
+		return true;
+	}
+
+	private void _migrate(
+			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
+			String label)
+		throws Exception {
+
+		String sourceClassName = null;
+
+		if (CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
+			sourceClassName = _getSourceClassName(
+				cmsMigrationContext, ddmTemplate);
+		}
+
+		if (Objects.equals(sourceClassName, BlogsEntry.class.getName())) {
+			_migrateBlogsEntryWidgetTemplate(
+				cmsMigrationContext, ddmTemplate, label);
+		}
+		else if (Objects.equals(
+					sourceClassName, JournalArticle.class.getName())) {
+
+			_migrateJournalArticleWidgetTemplate(
+				cmsMigrationContext, ddmTemplate, label);
+		}
+		else {
+			_warnUnmigratedWidgetTemplate(
+				cmsMigrationContext, ddmTemplate, label);
+		}
+	}
+
+	private void _migrate(
 			String className, CMSMigrationContext cmsMigrationContext,
 			String contentName, DDMTemplate ddmTemplate, String label)
 		throws Exception {
 
 		String script = ddmTemplate.getScript();
 
-		Set<String> unsupportedMethodNames = new LinkedHashSet<>();
+		WidgetTemplateScriptRewriter.Result result =
+			_widgetTemplateScriptRewriter.rewrite(className, script);
 
-		String rewrittenScript = _widgetTemplateScriptRewriter.rewrite(
-			className, script, unsupportedMethodNames);
+		CMSMigrationReport cmsMigrationReport =
+			cmsMigrationContext.getCMSMigrationReport();
 
-		if (!rewrittenScript.equals(script)) {
+		if (!script.equals(result.getScript())) {
 			_ddmTemplateLocalService.updateTemplate(
 				cmsMigrationContext.getUserId(), ddmTemplate.getTemplateId(),
 				ddmTemplate.getClassPK(), ddmTemplate.getNameMap(),
 				ddmTemplate.getDescriptionMap(), ddmTemplate.getType(),
 				ddmTemplate.getMode(), ddmTemplate.getLanguage(),
-				rewrittenScript, ddmTemplate.isCacheable(),
+				result.getScript(), ddmTemplate.isCacheable(),
 				cmsMigrationContext.getServiceContext());
 
-			cmsMigrationContext.getCMSMigrationReport(
-			).addWarning(
+			cmsMigrationReport.addWarning(
 				StringBundler.concat(
-					label, "was changed to read the migrated ", contentName)
-			);
+					label, "was changed to read the migrated ", contentName));
 		}
 
-		if (!unsupportedMethodNames.isEmpty()) {
-			cmsMigrationContext.getCMSMigrationReport(
-			).addWarning(
+		Set<String> changedMethodNames = result.getChangedMethodNames();
+
+		if (SetUtil.isNotEmpty(changedMethodNames)) {
+			cmsMigrationReport.addWarning(
+				StringBundler.concat(
+					label, "calls ",
+					StringUtil.merge(
+						changedMethodNames, StringPool.COMMA_AND_SPACE),
+					" on ", contentName,
+					", which returns a different value for object entries, so ",
+					"it must be reviewed"));
+		}
+
+		Set<String> unsupportedMethodNames = result.getUnsupportedMethodNames();
+
+		if (SetUtil.isNotEmpty(unsupportedMethodNames)) {
+			cmsMigrationReport.addWarning(
 				StringBundler.concat(
 					label, "calls ",
 					StringUtil.merge(
 						unsupportedMethodNames, StringPool.COMMA_AND_SPACE),
 					" on ", contentName,
 					", which object entries do not support, so it must be ",
-					"adapted to object entries")
-			);
+					"adapted to object entries"));
 		}
 
-		return rewrittenScript;
+		Set<String> unsupportedReferences = result.getUnsupportedReferences();
+
+		if (SetUtil.isNotEmpty(unsupportedReferences)) {
+			cmsMigrationReport.addWarning(
+				StringBundler.concat(
+					label, "references ",
+					StringUtil.merge(
+						unsupportedReferences, StringPool.COMMA_AND_SPACE),
+					", which does not apply to object entries, so it must be ",
+					"adapted to object entries"));
+		}
+
+		if (script.contains("serviceLocator")) {
+			cmsMigrationReport.addWarning(
+				label +
+					"uses serviceLocator to read classic services and must " +
+						"be adapted to object entries");
+		}
 	}
 
-	private String _migrateBlogsEntryWidgetTemplate(
+	private void _migrateBlogsEntryWidgetTemplate(
 			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
 			String label)
 		throws Exception {
 
-		return _migrate(
+		_migrate(
 			BlogsEntry.class.getName(), cmsMigrationContext, "blog entries",
 			ddmTemplate, label);
 	}
 
-	private String _migrateJournalArticleWidgetTemplate(
+	private void _migrateJournalArticleWidgetTemplate(
 			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
 			String label)
 		throws Exception {
 
-		return _migrate(
+		_migrate(
 			JournalArticle.class.getName(), cmsMigrationContext,
 			"web content articles", ddmTemplate, label);
 	}
 
-	private void _warnUnsupportedAPIs(
-		CMSMigrationContext cmsMigrationContext, String label, boolean migrated,
-		String script) {
+	private void _warnUnmigratedWidgetTemplate(
+		CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
+		String label) {
 
-		if ((!migrated &&
-			 (script.contains(".getAssetObject()") ||
-			  script.contains("getArticle") ||
-			  script.contains("getDocument"))) ||
+		String script = ddmTemplate.getScript();
+
+		if (script.contains(".getAssetObject()") ||
 			script.contains("BlogsEntry") ||
 			script.contains("JournalArticle") ||
+			script.contains("getArticle") || script.contains("getDocument") ||
 			script.contains("serviceLocator")) {
 
-			cmsMigrationContext.getCMSMigrationReport(
-			).addWarning(
+			CMSMigrationReport cmsMigrationReport =
+				cmsMigrationContext.getCMSMigrationReport();
+
+			cmsMigrationReport.addWarning(
 				label +
 					"reads Web Content or Blogs APIs and must be adapted to " +
-						"object entries"
-			);
+						"object entries");
 		}
 	}
 
@@ -257,7 +478,13 @@ public class WidgetTemplateMigrator {
 		"CMS-MIGRATION-BLOGS";
 
 	private final DDMTemplateLocalService _ddmTemplateLocalService;
+	private final Map<Long, String> _labels = new LinkedHashMap<>();
 	private final Portal _portal;
+	private final PortletPreferenceValueLocalService
+		_portletPreferenceValueLocalService;
+	private final PortletPreferencesLocalService
+		_portletPreferencesLocalService;
+	private final SAXReader _saxReader;
 	private final WidgetTemplateScriptRewriter _widgetTemplateScriptRewriter;
 
 }

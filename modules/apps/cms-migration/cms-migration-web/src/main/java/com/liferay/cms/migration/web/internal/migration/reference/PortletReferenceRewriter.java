@@ -733,8 +733,8 @@ public class PortletReferenceRewriter {
 		if (displayStyle.startsWith(
 				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX)) {
 
-			_widgetTemplateMigrator.migrate(
-				cmsMigrationContext, displayStyle, label, portletPreferences);
+			_widgetTemplateMigrator.addWidgetTemplate(
+				cmsMigrationContext, displayStyle, label);
 		}
 		else if (displayStyle.equals("abstracts") ||
 				 displayStyle.equals("full-content")) {
