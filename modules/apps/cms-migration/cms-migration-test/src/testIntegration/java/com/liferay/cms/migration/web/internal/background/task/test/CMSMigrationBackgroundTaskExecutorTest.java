@@ -2279,6 +2279,61 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 	}
 
 	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateUsedByUnmigratedContent()
+		throws Exception {
+
+		_blogsEntryLocalService.addEntry(
+			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(),
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		String script = StringBundler.concat(
+			"<#list entries as curEntry><#assign entry = ",
+			"curEntry.getAssetRenderer().getAssetObject() />",
+			"${entry.getUrlTitle()}</#list>");
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(script);
+
+		for (Class<?> clazz : new Class<?>[] {BlogsEntry.class, Layout.class}) {
+			LayoutTestUtil.addPortletToLayout(
+				LayoutTestUtil.addTypePortletLayout(_group),
+				AssetPublisherPortletKeys.ASSET_PUBLISHER,
+				HashMapBuilder.put(
+					"anyAssetType",
+					new String[] {String.valueOf(_portal.getClassNameId(clazz))}
+				).put(
+					"displayStyle",
+					new String[] {
+						PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+							ddmTemplate.getTemplateKey()
+					}
+				).put(
+					"displayStyleGroupId",
+					new String[] {String.valueOf(_group.getGroupId())}
+				).put(
+					"selectionStyle", new String[] {"dynamic"}
+				).build());
+		}
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				"reads Web Content or Blogs APIs and must be adapted"));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		Assert.assertEquals(script, ddmTemplate.getScript());
+	}
+
+	@Test
 	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateWithUnsupportedMethod()
 		throws Exception {
 
