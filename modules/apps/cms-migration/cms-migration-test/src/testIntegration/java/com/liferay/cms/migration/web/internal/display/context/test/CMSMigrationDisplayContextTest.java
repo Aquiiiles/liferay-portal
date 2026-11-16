@@ -73,7 +73,7 @@ public class CMSMigrationDisplayContextTest {
 		String warning = RandomTestUtil.randomString();
 
 		_completedBackgroundTask = _addBackgroundTask(
-			true, BackgroundTaskConstants.STATUS_SUCCESSFUL,
+			true, BackgroundTaskConstants.STATUS_COMPLETED_WITH_ERRORS,
 			JSONUtil.put(
 				"counts", JSONUtil.put("file-entries", 4)
 			).put(
@@ -86,6 +86,13 @@ public class CMSMigrationDisplayContextTest {
 			false, BackgroundTaskConstants.STATUS_IN_PROGRESS, null);
 		_queuedBackgroundTask = _addBackgroundTask(
 			false, BackgroundTaskConstants.STATUS_QUEUED, null);
+
+		_cancelledBackgroundTask = _addBackgroundTask(
+			true, BackgroundTaskConstants.STATUS_CANCELLED, null);
+		_failedBackgroundTask = _addBackgroundTask(
+			true, BackgroundTaskConstants.STATUS_FAILED, null);
+		_successfulBackgroundTask = _addBackgroundTask(
+			true, BackgroundTaskConstants.STATUS_SUCCESSFUL, null);
 
 		BackgroundTaskStatus backgroundTaskStatus =
 			BackgroundTaskStatusRegistryUtil.registerBackgroundTaskStatus(
@@ -145,8 +152,11 @@ public class CMSMigrationDisplayContextTest {
 				_completedBackgroundTask.getName(),
 				jsonObject.getString("name"));
 			Assert.assertEquals(
+				"warning", jsonObject.getString("statusDisplayType"));
+			Assert.assertEquals(
 				LanguageUtil.get(
-					LocaleUtil.US, BackgroundTaskConstants.LABEL_SUCCESSFUL),
+					LocaleUtil.US,
+					BackgroundTaskConstants.LABEL_COMPLETED_WITH_ERRORS),
 				jsonObject.getString("statusLabel"));
 			Assert.assertEquals(
 				JSONUtil.put(
@@ -166,6 +176,8 @@ public class CMSMigrationDisplayContextTest {
 					LocaleUtil.US, "cms-migration-journal-articles"),
 				jsonObject.getString("phaseLabel"));
 			Assert.assertEquals(40, jsonObject.getInt("progress"));
+			Assert.assertEquals(
+				"info", jsonObject.getString("statusDisplayType"));
 
 			jsonObject = _getMigrationJSONObject(
 				_queuedBackgroundTask, migrationsJSONArray);
@@ -176,6 +188,26 @@ public class CMSMigrationDisplayContextTest {
 			Assert.assertFalse(jsonObject.has("itemTitle"));
 			Assert.assertFalse(jsonObject.has("phaseLabel"));
 			Assert.assertEquals(0, jsonObject.getInt("progress"));
+			Assert.assertEquals(
+				"info", jsonObject.getString("statusDisplayType"));
+
+			jsonObject = _getMigrationJSONObject(
+				_cancelledBackgroundTask, migrationsJSONArray);
+
+			Assert.assertEquals(
+				"secondary", jsonObject.getString("statusDisplayType"));
+
+			jsonObject = _getMigrationJSONObject(
+				_failedBackgroundTask, migrationsJSONArray);
+
+			Assert.assertEquals(
+				"danger", jsonObject.getString("statusDisplayType"));
+
+			jsonObject = _getMigrationJSONObject(
+				_successfulBackgroundTask, migrationsJSONArray);
+
+			Assert.assertEquals(
+				"success", jsonObject.getString("statusDisplayType"));
 		}
 		finally {
 			BackgroundTaskStatusRegistryUtil.unregisterBackgroundTaskStatus(
@@ -259,6 +291,9 @@ public class CMSMigrationDisplayContextTest {
 	@Inject
 	private BackgroundTaskLocalService _backgroundTaskLocalService;
 
+	@DeleteAfterTestRun
+	private BackgroundTask _cancelledBackgroundTask;
+
 	private Company _company;
 
 	@Inject
@@ -271,6 +306,9 @@ public class CMSMigrationDisplayContextTest {
 	private CounterLocalService _counterLocalService;
 
 	@DeleteAfterTestRun
+	private BackgroundTask _failedBackgroundTask;
+
+	@DeleteAfterTestRun
 	private BackgroundTask _inProgressBackgroundTask;
 
 	@Inject(
@@ -280,5 +318,8 @@ public class CMSMigrationDisplayContextTest {
 
 	@DeleteAfterTestRun
 	private BackgroundTask _queuedBackgroundTask;
+
+	@DeleteAfterTestRun
+	private BackgroundTask _successfulBackgroundTask;
 
 }
