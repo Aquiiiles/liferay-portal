@@ -32,11 +32,11 @@ import com.liferay.cms.migration.web.internal.migration.reference.JSONReferenceR
 import com.liferay.cms.migration.web.internal.migration.reference.LayoutReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.PortletReferenceRewriter;
 import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigationMenuItemReferenceRewriter;
+import com.liferay.cms.migration.web.internal.migration.reference.WidgetTemplateScriptRewriter;
 import com.liferay.cms.migration.web.internal.migration.structure.ObjectDefinitionMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.JournalTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
-import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateScriptRewriter;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.depot.service.DepotEntryLocalService;
