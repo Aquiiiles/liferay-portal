@@ -46,6 +46,22 @@
 		{
 			"from": "[$ENTRY$].getUrlTitle(locale)",
 			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+		},
+		{
+			"from": "[$SERVICE$].fetchLatestArticle([$ASSET_ENTRY$].classPK)",
+			"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+		},
+		{
+			"from": "[$SERVICE$].fetchLatestArticle([$ASSET_ENTRY$].getClassPK())",
+			"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+		},
+		{
+			"from": "[$SERVICE$].getLatestArticle([$ASSET_ENTRY$].classPK)",
+			"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+		},
+		{
+			"from": "[$SERVICE$].getLatestArticle([$ASSET_ENTRY$].getClassPK())",
+			"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
 		}
 	],
 	"unsupportedReferences": [

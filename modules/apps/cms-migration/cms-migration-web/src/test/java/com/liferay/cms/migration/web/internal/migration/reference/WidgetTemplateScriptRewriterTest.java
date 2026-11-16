@@ -103,6 +103,25 @@ public class WidgetTemplateScriptRewriterTest {
 	}
 
 	@Test
+	public void testRewriteWithServiceLocator() {
+		String serviceScript = StringBundler.concat(
+			"<#assign journalArticleLocalService = ",
+			"serviceLocator.findService(\"com.liferay.journal.service.",
+			"JournalArticleLocalService\") />");
+
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				serviceScript, "<#list entries as curEntry><#assign ",
+				"objectEntry = curEntry.getAssetRenderer().getAssetObject() />",
+				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
+			StringBundler.concat(
+				serviceScript, "<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalService.fetchLatestArticle(curEntry.",
+				"getClassPK()) />${article.getTitle(locale)}</#list>"));
+	}
+
+	@Test
 	public void testRewriteWithSeveralVariables() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),

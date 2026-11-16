@@ -68,9 +68,17 @@ public class WidgetTemplateScriptRewriter {
 
 			String from = replacementJSONObject.getString("from");
 
-			if (!from.contains(_PLACEHOLDER)) {
-				script = StringUtil.replace(
-					script, from, replacementJSONObject.getString("to"));
+			if (from.contains(_PLACEHOLDER)) {
+				continue;
+			}
+
+			String to = replacementJSONObject.getString("to");
+
+			if (from.contains(_PLACEHOLDER_ASSET_ENTRY)) {
+				script = _replaceAssetEntryExpressions(from, script, to);
+			}
+			else {
+				script = StringUtil.replace(script, from, to);
 			}
 		}
 
@@ -386,9 +394,28 @@ public class WidgetTemplateScriptRewriter {
 		return script;
 	}
 
+	private String _replaceAssetEntryExpressions(
+		String from, String script, String to) {
+
+		String regex = StringUtil.replace(
+			Pattern.quote(from),
+			new String[] {_PLACEHOLDER_ASSET_ENTRY, _PLACEHOLDER_SERVICE},
+			new String[] {"\\E(\\w+)\\Q", "\\E\\w+\\Q"});
+
+		return script.replaceAll(
+			_BOUNDARY + regex,
+			StringUtil.replace(
+				Matcher.quoteReplacement(to),
+				Matcher.quoteReplacement(_PLACEHOLDER_ASSET_ENTRY), "$1"));
+	}
+
 	private static final String _BOUNDARY = "(?<![\\w.])";
 
 	private static final String _PLACEHOLDER = "[$ENTRY$]";
+
+	private static final String _PLACEHOLDER_ASSET_ENTRY = "[$ASSET_ENTRY$]";
+
+	private static final String _PLACEHOLDER_SERVICE = "[$SERVICE$]";
 
 	private static final String _VARIABLE_BOUNDARY = "(?<![\\w.?])";
 
