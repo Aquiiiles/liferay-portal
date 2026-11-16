@@ -208,4 +208,43 @@ describe('Migrations', () => {
 
 		expect(reload).not.toHaveBeenCalled();
 	});
+
+	it('renders the status label with its display type', () => {
+		render(
+			<Migrations
+				migrations={[
+					{...QUEUED_MIGRATION, statusDisplayType: 'warning'},
+				]}
+			/>
+		);
+
+		expect(screen.getByText('Queued').closest('.label')).toHaveClass(
+			'label-warning'
+		);
+	});
+
+	it.each([
+		['en-US', '27,985 Widgets'],
+		['pt-BR', '27.985 Widgets'],
+	])(
+		'formats the counts with the %s grouping separator',
+		(languageId, text) => {
+			(
+				Liferay.ThemeDisplay.getBCP47LanguageId as jest.Mock
+			).mockReturnValueOnce(languageId);
+
+			render(
+				<Migrations
+					migrations={[
+						{
+							...COMPLETED_MIGRATION,
+							counts: [{label: 'Widgets', value: 27985}],
+						},
+					]}
+				/>
+			);
+
+			expect(screen.getByRole('listitem')).toHaveTextContent(text);
+		}
+	);
 });
