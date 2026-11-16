@@ -85,7 +85,7 @@ public class WidgetTemplateMigrator {
 			return;
 		}
 
-		_labels.putIfAbsent(
+		_messagePrefixes.putIfAbsent(
 			ddmTemplate.getTemplateId(),
 			StringBundler.concat(
 				label, " uses the widget template ",
@@ -130,7 +130,7 @@ public class WidgetTemplateMigrator {
 		CMSMigrationReport cmsMigrationReport =
 			cmsMigrationContext.getCMSMigrationReport();
 
-		for (Map.Entry<Long, String> entry : _labels.entrySet()) {
+		for (Map.Entry<Long, String> entry : _messagePrefixes.entrySet()) {
 			DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchDDMTemplate(
 				entry.getKey());
 
@@ -150,7 +150,7 @@ public class WidgetTemplateMigrator {
 			}
 		}
 
-		_labels.clear();
+		_messagePrefixes.clear();
 	}
 
 	private Set<String> _getListedSourceClassNames(
@@ -333,7 +333,7 @@ public class WidgetTemplateMigrator {
 
 	private void _migrate(
 			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
-			String label)
+			String messagePrefix)
 		throws Exception {
 
 		String sourceClassName = null;
@@ -345,23 +345,23 @@ public class WidgetTemplateMigrator {
 
 		if (Objects.equals(sourceClassName, BlogsEntry.class.getName())) {
 			_migrateBlogsEntryWidgetTemplate(
-				cmsMigrationContext, ddmTemplate, label);
+				cmsMigrationContext, ddmTemplate, messagePrefix);
 		}
 		else if (Objects.equals(
 					sourceClassName, JournalArticle.class.getName())) {
 
 			_migrateJournalArticleWidgetTemplate(
-				cmsMigrationContext, ddmTemplate, label);
+				cmsMigrationContext, ddmTemplate, messagePrefix);
 		}
 		else {
 			_warnUnmigratedWidgetTemplate(
-				cmsMigrationContext, ddmTemplate, label);
+				cmsMigrationContext, ddmTemplate, messagePrefix);
 		}
 	}
 
 	private void _migrate(
 			String className, CMSMigrationContext cmsMigrationContext,
-			String contentName, DDMTemplate ddmTemplate, String label)
+			String contentName, DDMTemplate ddmTemplate, String messagePrefix)
 		throws Exception {
 
 		String script = ddmTemplate.getScript();
@@ -383,7 +383,8 @@ public class WidgetTemplateMigrator {
 
 			cmsMigrationReport.addWarning(
 				StringBundler.concat(
-					label, "was changed to read the migrated ", contentName));
+					messagePrefix, "was changed to read the migrated ",
+					contentName));
 		}
 
 		Set<String> changedMethodNames = result.getChangedMethodNames();
@@ -391,7 +392,7 @@ public class WidgetTemplateMigrator {
 		if (SetUtil.isNotEmpty(changedMethodNames)) {
 			cmsMigrationReport.addWarning(
 				StringBundler.concat(
-					label, "calls ",
+					messagePrefix, "calls ",
 					StringUtil.merge(
 						changedMethodNames, StringPool.COMMA_AND_SPACE),
 					" on ", contentName,
@@ -404,7 +405,7 @@ public class WidgetTemplateMigrator {
 		if (SetUtil.isNotEmpty(unsupportedMethodNames)) {
 			cmsMigrationReport.addWarning(
 				StringBundler.concat(
-					label, "calls ",
+					messagePrefix, "calls ",
 					StringUtil.merge(
 						unsupportedMethodNames, StringPool.COMMA_AND_SPACE),
 					" on ", contentName,
@@ -417,7 +418,7 @@ public class WidgetTemplateMigrator {
 		if (SetUtil.isNotEmpty(unsupportedReferences)) {
 			cmsMigrationReport.addWarning(
 				StringBundler.concat(
-					label, "references ",
+					messagePrefix, "references ",
 					StringUtil.merge(
 						unsupportedReferences, StringPool.COMMA_AND_SPACE),
 					", which does not apply to object entries, so it must be ",
@@ -426,7 +427,7 @@ public class WidgetTemplateMigrator {
 
 		if (script.contains("serviceLocator")) {
 			cmsMigrationReport.addWarning(
-				label +
+				messagePrefix +
 					"uses serviceLocator to read classic services and must " +
 						"be adapted to object entries");
 		}
@@ -434,27 +435,27 @@ public class WidgetTemplateMigrator {
 
 	private void _migrateBlogsEntryWidgetTemplate(
 			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
-			String label)
+			String messagePrefix)
 		throws Exception {
 
 		_migrate(
 			BlogsEntry.class.getName(), cmsMigrationContext, "blog entries",
-			ddmTemplate, label);
+			ddmTemplate, messagePrefix);
 	}
 
 	private void _migrateJournalArticleWidgetTemplate(
 			CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
-			String label)
+			String messagePrefix)
 		throws Exception {
 
 		_migrate(
 			JournalArticle.class.getName(), cmsMigrationContext,
-			"web content articles", ddmTemplate, label);
+			"web content articles", ddmTemplate, messagePrefix);
 	}
 
 	private void _warnUnmigratedWidgetTemplate(
 		CMSMigrationContext cmsMigrationContext, DDMTemplate ddmTemplate,
-		String label) {
+		String messagePrefix) {
 
 		String script = ddmTemplate.getScript();
 
@@ -468,7 +469,7 @@ public class WidgetTemplateMigrator {
 				cmsMigrationContext.getCMSMigrationReport();
 
 			cmsMigrationReport.addWarning(
-				label +
+				messagePrefix +
 					"reads Web Content or Blogs APIs and must be adapted to " +
 						"object entries");
 		}
@@ -478,7 +479,7 @@ public class WidgetTemplateMigrator {
 		"CMS-MIGRATION-BLOGS";
 
 	private final DDMTemplateLocalService _ddmTemplateLocalService;
-	private final Map<Long, String> _labels = new LinkedHashMap<>();
+	private final Map<Long, String> _messagePrefixes = new LinkedHashMap<>();
 	private final Portal _portal;
 	private final PortletPreferenceValueLocalService
 		_portletPreferenceValueLocalService;
