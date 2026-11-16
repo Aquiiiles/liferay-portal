@@ -26,7 +26,6 @@ import com.liferay.portlet.display.template.PortletDisplayTemplate;
 import jakarta.portlet.PortletPreferences;
 
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -95,8 +94,7 @@ public class WidgetTemplateMigrator {
 
 		label = StringBundler.concat(
 			label, " uses the widget template ",
-			ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
-			ddmTemplate.getTemplateId(), ", key ", templateKey, "), which ");
+			CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ", which ");
 
 		String script = ddmTemplate.getScript();
 
@@ -104,8 +102,7 @@ public class WidgetTemplateMigrator {
 			cmsMigrationContext, portletPreferences);
 
 		if (blogsEntryListed &&
-			Objects.equals(
-				ddmTemplate.getLanguage(), TemplateConstants.LANG_TYPE_FTL)) {
+			CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
 
 			script = _migrateBlogsEntryWidgetTemplate(
 				cmsMigrationContext, ddmTemplate, label);

@@ -38,7 +38,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,7 +179,7 @@ public class JournalTemplateMigrator {
 				).addError(
 					StringBundler.concat(
 						"Unable to migrate the template ",
-						ddmTemplate.getTemplateKey(), ": ",
+						CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ": ",
 						exception.getMessage())
 				);
 			}
@@ -296,13 +295,13 @@ public class JournalTemplateMigrator {
 			DDMTemplate ddmTemplate, ObjectDefinition objectDefinition)
 		throws PortalException {
 
-		if (!Objects.equals(
-				ddmTemplate.getLanguage(), TemplateConstants.LANG_TYPE_FTL)) {
-
+		if (!CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
 			cmsMigrationContext.getCMSMigrationReport(
 			).addWarning(
-				"Skipped the template " + ddmTemplate.getTemplateKey() +
-					" because only FreeMarker templates can be migrated"
+				StringBundler.concat(
+					"Skipped the template ",
+					CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate),
+					" because only FreeMarker templates can be migrated")
 			);
 
 			return;
@@ -334,14 +333,13 @@ public class JournalTemplateMigrator {
 
 		cmsMigrationContext.sendStatus(ddmTemplate.getTemplateKey());
 
-		if (!Objects.equals(
-				ddmTemplate.getLanguage(), TemplateConstants.LANG_TYPE_FTL)) {
-
+		if (!CMSMigrationDDMTemplateUtil.isFreeMarker(ddmTemplate)) {
 			cmsMigrationContext.getCMSMigrationReport(
 			).addWarning(
-				"Skipped the information template " +
-					ddmTemplate.getTemplateKey() +
-						" because only FreeMarker templates can be migrated"
+				StringBundler.concat(
+					"Skipped the information template ",
+					CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate),
+					" because only FreeMarker templates can be migrated")
 			);
 
 			return;
