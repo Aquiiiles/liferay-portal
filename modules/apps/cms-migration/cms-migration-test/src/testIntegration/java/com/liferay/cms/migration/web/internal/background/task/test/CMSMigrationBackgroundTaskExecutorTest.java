@@ -2204,11 +2204,11 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 
 		Assert.assertEquals(
 			StringBundler.concat(
-				"<#list entries as curEntry><#assign article = ",
+				"<#list entries as curEntry><#assign objectEntry = ",
 				"curEntry.getAssetRenderer().getAssetObject() />",
-				"${article.getTitleValue(locale.toString())}|",
-				"${(article.getURLTitle(locale)!\"\")}|",
-				"${article.getArticleId()}</#list>"),
+				"${objectEntry.getTitleValue(locale.toString())}|",
+				"${(objectEntry.getURLTitle(locale)!\"\")}|",
+				"${objectEntry.getArticleId()}</#list>"),
 			ddmTemplate.getScript());
 	}
 

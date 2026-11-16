@@ -7,6 +7,7 @@ package com.liferay.cms.migration.web.internal.migration.reference;
 
 import com.liferay.blogs.model.BlogsEntry;
 import com.liferay.journal.model.JournalArticle;
+import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.json.JSONFactoryImpl;
 import com.liferay.portal.kernel.test.util.RandomTestUtil;
 import com.liferay.portal.kernel.util.SetUtil;
@@ -40,8 +41,8 @@ public class WidgetTemplateScriptRewriterTest {
 	public void testRewrite() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
-			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
-				"${(blogsEntry.getURLTitle(locale)!\"\")}",
+			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
+				"${(objectEntry.getURLTitle(locale)!\"\")}",
 			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
 				"${blogsEntry.getUrlTitle()}");
 	}
@@ -61,6 +62,17 @@ public class WidgetTemplateScriptRewriterTest {
 	}
 
 	@Test
+	public void testRewriteWithExistingObjectEntryVariable() {
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			"<#assign objectEntry = 1 blogsEntry = " +
+				"assetRenderer.getAssetObject() />" +
+					"${(blogsEntry.getURLTitle(locale)!\"\")}",
+			"<#assign objectEntry = 1 blogsEntry = " +
+				"assetRenderer.getAssetObject() />${blogsEntry.getUrlTitle()}");
+	}
+
+	@Test
 	public void testRewriteWithInlineExpression() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
@@ -73,8 +85,8 @@ public class WidgetTemplateScriptRewriterTest {
 	public void testRewriteWithJournalArticle() {
 		_assertRewrite(
 			JournalArticle.class.getName(),
-			"<#assign article = assetRenderer.getAssetObject() />" +
-				"${article.getTitleValue(locale.toString())}",
+			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
+				"${objectEntry.getTitleValue(locale.toString())}",
 			"<#assign article = assetRenderer.getArticle() />" +
 				"${article.getTitle(locale)}");
 	}
@@ -83,11 +95,26 @@ public class WidgetTemplateScriptRewriterTest {
 	public void testRewriteWithProperty() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
-			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
-				"${blogsEntry.getTitleValue(locale.toString())}" +
-					"${blogsEntry.titleMap}",
+			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
+				"${objectEntry.getTitleValue(locale.toString())}" +
+					"${objectEntry.titleMap}",
 			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
 				"${blogsEntry.title}${blogsEntry.titleMap}");
+	}
+
+	@Test
+	public void testRewriteWithSeveralVariables() {
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			StringBundler.concat(
+				"<#assign objectEntry = assetRenderer.getAssetObject() ",
+				"objectEntry2 = curEntry.getAssetRenderer().getAssetObject() ",
+				"/>${objectEntry.getUserName()}",
+				"${objectEntry2.getUserName()}"),
+			StringBundler.concat(
+				"<#assign first = assetRenderer.getAssetObject() second = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${first.getUserName()}${second.getUserName()}"));
 	}
 
 	@Test
@@ -101,12 +128,14 @@ public class WidgetTemplateScriptRewriterTest {
 
 	@Test
 	public void testRewriteWithUnrelatedVariable() {
-		String script =
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
+				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
+					"${other.blogsEntry.getTitle()}",
 			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
 				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
-					"${other.blogsEntry.getTitle()}";
-
-		_assertRewrite(BlogsEntry.class.getName(), script, script);
+					"${other.blogsEntry.getTitle()}");
 	}
 
 	@Test
@@ -134,6 +163,24 @@ public class WidgetTemplateScriptRewriterTest {
 		Assert.assertEquals(
 			SetUtil.fromArray("com.liferay.blogs.model.BlogsEntry"),
 			result.getUnsupportedReferences());
+	}
+
+	@Test
+	public void testRewriteWithVariableNameInText() {
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			StringBundler.concat(
+				"<#-- entry --><#assign objectEntry = ",
+				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
+				"<#if objectEntry.getUserName()?has_content>",
+				"<a href=\"/entry/${objectEntry.getUserName()}\">",
+				"${\"entry ${objectEntry.getUserName()}\"}</a></#if></div>"),
+			StringBundler.concat(
+				"<#-- entry --><#assign entry = ",
+				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
+				"<#if entry.getUserName()?has_content>",
+				"<a href=\"/entry/${entry.getUserName()}\">",
+				"${\"entry ${entry.getUserName()}\"}</a></#if></div>"));
 	}
 
 	private void _assertRewrite(
