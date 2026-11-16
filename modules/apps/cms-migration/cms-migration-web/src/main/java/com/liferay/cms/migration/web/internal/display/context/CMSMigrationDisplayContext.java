@@ -14,6 +14,7 @@ import com.liferay.portal.kernel.backgroundtask.BackgroundTask;
 import com.liferay.portal.kernel.backgroundtask.BackgroundTaskManager;
 import com.liferay.portal.kernel.backgroundtask.BackgroundTaskStatus;
 import com.liferay.portal.kernel.backgroundtask.BackgroundTaskStatusRegistryUtil;
+import com.liferay.portal.kernel.backgroundtask.constants.BackgroundTaskConstants;
 import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
@@ -203,6 +204,31 @@ public class CMSMigrationDisplayContext {
 			_themeDisplay.getCompanyId(), DepotConstants.TYPE_SPACE);
 	}
 
+	private String _getStatusDisplayType(int status) {
+		if (status == BackgroundTaskConstants.STATUS_CANCELLED) {
+			return "secondary";
+		}
+		else if (status ==
+					BackgroundTaskConstants.STATUS_COMPLETED_WITH_ERRORS) {
+
+			return "warning";
+		}
+		else if (status == BackgroundTaskConstants.STATUS_FAILED) {
+			return "danger";
+		}
+		else if ((status == BackgroundTaskConstants.STATUS_IN_PROGRESS) ||
+				 (status == BackgroundTaskConstants.STATUS_NEW) ||
+				 (status == BackgroundTaskConstants.STATUS_QUEUED)) {
+
+			return "info";
+		}
+		else if (status == BackgroundTaskConstants.STATUS_SUCCESSFUL) {
+			return "success";
+		}
+
+		return "secondary";
+	}
+
 	private JSONObject _getStatusJSONObject(BackgroundTask backgroundTask)
 		throws Exception {
 
@@ -256,6 +282,9 @@ public class CMSMigrationDisplayContext {
 			"name", backgroundTask.getName()
 		).put(
 			"progress", _getProgress(backgroundTask)
+		).put(
+			"statusDisplayType",
+			_getStatusDisplayType(backgroundTask.getStatus())
 		).put(
 			"statusLabel",
 			LanguageUtil.get(
