@@ -146,6 +146,7 @@ import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.test.rule.Inject;
 import com.liferay.portal.test.rule.LiferayIntegrationTestRule;
 import com.liferay.portal.test.rule.PermissionCheckerMethodTestRule;
+import com.liferay.portlet.display.template.PortletDisplayTemplate;
 import com.liferay.reading.time.model.ReadingTimeEntry;
 import com.liferay.reading.time.service.ReadingTimeEntryLocalService;
 import com.liferay.segments.service.SegmentsExperienceLocalService;
@@ -159,6 +160,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -2069,6 +2071,196 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 	}
 
 	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplate()
+		throws Exception {
+
+		String coverImageCaption = RandomTestUtil.randomString();
+
+		BlogsEntry blogsEntry = _blogsEntryLocalService.addEntry(
+			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(), new Date(), false, false,
+			new String[0], coverImageCaption, null, null,
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign assetRenderer = ",
+				"curEntry.getAssetRenderer() blogsEntry = ",
+				"assetRenderer.getAssetObject() />",
+				"${blogsEntry.getUrlTitle()}|",
+				"${blogsEntry.getCoverImageCaption()}|${blogsEntry.title}",
+				"</#list>"));
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(BlogsEntry.class))
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertFalse(
+			statusMessage, statusMessage.contains("must be adapted"));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		String script = ddmTemplate.getScript();
+
+		Assert.assertFalse(
+			script, script.contains("cmsMigrationTemplateContextHelper"));
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				blogsEntry.getUrlTitle(), StringPool.PIPE, coverImageCaption,
+				StringPool.PIPE, blogsEntry.getTitle()),
+			_renderAssetPublisherWidgetTemplate(
+				blogsEntry, layout, ddmTemplate.getTemplateKey()));
+	}
+
+	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateReadingWebContent()
+		throws Exception {
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		String script =
+			"<#list entries as curEntry>${curEntry.getAssetRenderer()." +
+				"getArticle().getArticleId()}</#list>";
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(script);
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(JournalArticle.class))
+				}
+			).put(
+				"anyClassTypeJournalArticleAssetRendererFactory",
+				new String[] {
+					String.valueOf(journalArticle.getDDMStructureId())
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				StringBundler.concat(
+					"uses the widget template ",
+					ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
+					ddmTemplate.getTemplateId(), ", key ",
+					ddmTemplate.getTemplateKey(),
+					"), which reads Web Content or Blogs APIs and must be ",
+					"adapted to object entries")));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		Assert.assertEquals(script, ddmTemplate.getScript());
+	}
+
+	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateWithUnsupportedMethod()
+		throws Exception {
+
+		_blogsEntryLocalService.addEntry(
+			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
+			RandomTestUtil.randomString(),
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign blogsEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${blogsEntry.getCoverImageURL(themeDisplay)}</#list>"));
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(BlogsEntry.class))
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				StringBundler.concat(
+					"uses the widget template ",
+					ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
+					ddmTemplate.getTemplateId(), ", key ",
+					ddmTemplate.getTemplateKey(),
+					"), which calls getCoverImageURL on blog entries")));
+	}
+
+	@Test
 	public void testExecuteWithRewritePagesAndBlogsWidgets() throws Exception {
 		BlogsEntry blogsEntry = _blogsEntryLocalService.addEntry(
 			TestPropsValues.getUserId(), RandomTestUtil.randomString(),
@@ -2936,6 +3128,19 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			_group.getGroupId(), JournalArticle.class.getName(), ddmForm);
 	}
 
+	private DDMTemplate _addWidgetTemplate(String script) throws Exception {
+		return _ddmTemplateLocalService.addTemplate(
+			RandomTestUtil.randomString(), TestPropsValues.getUserId(),
+			_group.getGroupId(), _portal.getClassNameId(AssetEntry.class), 0,
+			_portal.getClassNameId(PortletDisplayTemplate.class),
+			HashMapBuilder.put(
+				LocaleUtil.getSiteDefault(), RandomTestUtil.randomString()
+			).build(),
+			null, DDMTemplateConstants.TEMPLATE_TYPE_DISPLAY, StringPool.BLANK,
+			TemplateConstants.LANG_TYPE_FTL, script,
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+	}
+
 	private void _assertPortletPermissions(
 			Role guestRole, boolean guestRoleView, Layout layout,
 			String oldPortletId, Role siteMemberRole,
@@ -3434,6 +3639,14 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			BlogsEntry blogsEntry, Layout layout)
 		throws Exception {
 
+		return _renderAssetPublisherWidgetTemplate(
+			blogsEntry, layout, "CMS-MIGRATION-BLOGS");
+	}
+
+	private String _renderAssetPublisherWidgetTemplate(
+			BlogsEntry blogsEntry, Layout layout, String templateKey)
+		throws Exception {
+
 		ObjectEntry objectEntry = _getObjectEntry(
 			"CMS_MIGRATION_BLOGS_ENTRY",
 			"CMS_MIGRATION_BLOGS_ENTRY_" + blogsEntry.getEntryId());
@@ -3457,7 +3670,7 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 
 		return _portletDisplayTemplateManager.renderDDMTemplate(
 			_portal.getClassNameId(AssetEntry.class), contextObjects,
-			"CMS-MIGRATION-BLOGS",
+			templateKey,
 			Collections.singletonList(
 				_assetEntryLocalService.getEntry(
 					objectEntry.getModelClassName(),
