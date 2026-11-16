@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import ClayLabel from '@clayui/label';
+import ClayLabel, {LabelDisplayType} from '@clayui/label';
 import ClayLayout from '@clayui/layout';
 import ClayLink from '@clayui/link';
 import ClayPanel from '@clayui/panel';
 import ClayProgressBar from '@clayui/progress-bar';
 import {sub} from 'frontend-js-web';
-import React, {useEffect} from 'react';
+import React, {useEffect, useMemo} from 'react';
 
 export interface IMigration {
 	backgroundTaskId: number;
@@ -23,6 +23,7 @@ export interface IMigration {
 	name: string;
 	phaseLabel?: string;
 	progress: number;
+	statusDisplayType: LabelDisplayType;
 	statusLabel: string;
 	warnings: string[];
 }
@@ -84,13 +85,18 @@ function Migration({migration}: {migration: IMigration}) {
 		name,
 		phaseLabel,
 		progress,
+		statusDisplayType,
 		statusLabel,
 		warnings,
 	} = migration;
 
+	const numberFormat = useMemo(() => {
+		return new Intl.NumberFormat(Liferay.ThemeDisplay.getBCP47LanguageId());
+	}, []);
+
 	return (
 		<div className="border-bottom mb-3 pb-3">
-			<ClayLayout.ContentRow>
+			<ClayLayout.ContentRow padded verticalAlign="center">
 				<ClayLayout.ContentCol expand>
 					<h3 className="h4">{name}</h3>
 
@@ -98,7 +104,9 @@ function Migration({migration}: {migration: IMigration}) {
 				</ClayLayout.ContentCol>
 
 				<ClayLayout.ContentCol>
-					<ClayLabel displayType="unstyled">{statusLabel}</ClayLabel>
+					<ClayLabel displayType={statusDisplayType}>
+						{statusLabel}
+					</ClayLabel>
 				</ClayLayout.ContentCol>
 
 				{completed && (
@@ -132,8 +140,13 @@ function Migration({migration}: {migration: IMigration}) {
 				<>
 					<ul className="list-inline mt-2">
 						{counts.map(({label, value}) => (
-							<li className="list-inline-item" key={label}>
-								<strong>{value}</strong> {label}
+							<li
+								className="list-inline-item text-nowrap"
+								key={label}
+							>
+								<strong>{numberFormat.format(value)}</strong>
+
+								{` ${label}`}
 							</li>
 						))}
 					</ul>
@@ -142,7 +155,7 @@ function Migration({migration}: {migration: IMigration}) {
 						className="text-danger"
 						label={sub(
 							Liferay.Language.get('cms-migration-x-errors'),
-							errors.length
+							numberFormat.format(errors.length)
 						)}
 						messages={errors}
 					/>
@@ -151,7 +164,7 @@ function Migration({migration}: {migration: IMigration}) {
 						className="text-warning"
 						label={sub(
 							Liferay.Language.get('cms-migration-x-warnings'),
-							warnings.length
+							numberFormat.format(warnings.length)
 						)}
 						messages={warnings}
 					/>

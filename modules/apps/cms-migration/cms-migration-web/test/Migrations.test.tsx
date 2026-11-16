@@ -27,6 +27,7 @@ const COMPLETED_MIGRATION: IMigration = {
 	inProgress: false,
 	name: 'Migration 1',
 	progress: 0,
+	statusDisplayType: 'success',
 	statusLabel: 'Successful',
 	warnings: [],
 };
@@ -42,6 +43,7 @@ const IN_PROGRESS_MIGRATION: IMigration = {
 	name: 'Migration 2',
 	phaseLabel: 'Web Content',
 	progress: 40,
+	statusDisplayType: 'info',
 	statusLabel: 'In Progress',
 	warnings: [],
 };
@@ -55,6 +57,7 @@ const QUEUED_MIGRATION: IMigration = {
 	inProgress: false,
 	name: 'Migration 3',
 	progress: 0,
+	statusDisplayType: 'info',
 	statusLabel: 'Queued',
 	warnings: [],
 };
