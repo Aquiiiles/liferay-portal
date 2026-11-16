@@ -76,13 +76,7 @@ public class WidgetTemplateScriptRewriter {
 
 		script = _renameVariables(script);
 
-		Set<String> expressions = _getVariableNames(script);
-
-		Matcher matcher = _assetObjectPattern.matcher(script);
-
-		while (matcher.find()) {
-			expressions.add(matcher.group());
-		}
+		Set<String> expressions = _getExpressions(script);
 
 		for (String expression : expressions) {
 			for (int i = 0; i < replacementsJSONArray.length(); i++) {
@@ -121,7 +115,7 @@ public class WidgetTemplateScriptRewriter {
 			Pattern pattern = Pattern.compile(
 				_BOUNDARY + Pattern.quote(expression) + "\\.(\\w+)\\(");
 
-			matcher = pattern.matcher(script);
+			Matcher matcher = pattern.matcher(script);
 
 			while (matcher.find()) {
 				String methodName = matcher.group(1);
@@ -203,6 +197,18 @@ public class WidgetTemplateScriptRewriter {
 		}
 
 		return script.length();
+	}
+
+	private Set<String> _getExpressions(String script) {
+		Set<String> expressions = _getVariableNames(script);
+
+		Matcher matcher = _assetObjectPattern.matcher(script);
+
+		while (matcher.find()) {
+			expressions.add(matcher.group());
+		}
+
+		return expressions;
 	}
 
 	private String _getPropertyName(String expression, String from) {
