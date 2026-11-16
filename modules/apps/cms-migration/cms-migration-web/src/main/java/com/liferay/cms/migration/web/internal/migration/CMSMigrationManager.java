@@ -157,6 +157,13 @@ public class CMSMigrationManager {
 				).size());
 
 			_journalArticleMigrator.migrateAll(cmsMigrationContext);
+
+			_sendPhase(
+				CMSMigrationConstants.PHASE_TEMPLATES,
+				cmsMigrationContext.getDDMStructures(
+				).size());
+
+			_journalTemplateMigrator.migrate(cmsMigrationContext);
 		}
 
 		if (cmsMigrationContext.isMigrateBlogsEntries()) {
@@ -170,15 +177,6 @@ public class CMSMigrationManager {
 		}
 
 		_rewriteContentLinks(cmsMigrationContext);
-
-		if (cmsMigrationContext.isMigrateJournalArticles()) {
-			_sendPhase(
-				CMSMigrationConstants.PHASE_TEMPLATES,
-				cmsMigrationContext.getDDMStructures(
-				).size());
-
-			_journalTemplateMigrator.migrate(cmsMigrationContext);
-		}
 
 		if (!cmsMigrationContext.isRewritePages()) {
 			return;
