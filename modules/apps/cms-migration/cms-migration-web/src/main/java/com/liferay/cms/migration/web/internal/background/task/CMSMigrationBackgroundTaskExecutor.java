@@ -35,6 +35,8 @@ import com.liferay.cms.migration.web.internal.migration.reference.SiteNavigation
 import com.liferay.cms.migration.web.internal.migration.structure.ObjectDefinitionMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.DisplayPageTemplateMigrator;
 import com.liferay.cms.migration.web.internal.migration.template.TemplateMigrator;
+import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
+import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateScriptRewriter;
 import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.depot.service.DepotEntryLocalService;
@@ -230,8 +232,9 @@ public class CMSMigrationBackgroundTaskExecutor
 	}
 
 	private CMSMigrationManager _createCMSMigrationManager(
-		CMSMigrationBackgroundTaskStatusMessageSender
-			cmsMigrationBackgroundTaskStatusMessageSender) {
+			CMSMigrationBackgroundTaskStatusMessageSender
+				cmsMigrationBackgroundTaskStatusMessageSender)
+		throws Exception {
 
 		InfoItemReferenceMapper infoItemReferenceMapper =
 			new InfoItemReferenceMapper(
@@ -340,13 +343,15 @@ public class CMSMigrationBackgroundTaskExecutor
 		PortletReferenceRewriter portletReferenceRewriter =
 			new PortletReferenceRewriter(
 				_assetEntryLocalService, _assetPublisherHelper,
-				assetQueryReferenceRewriter, _ddmTemplateLocalService,
-				_fragmentEntryLinkLocalService, _groupLocalService,
-				infoItemReferenceMapper, _journalArticleLocalService,
-				_jsonFactory, _layoutLocalService, _portal,
-				_portletPreferencesLocalService, _resourceActions,
+				assetQueryReferenceRewriter, _fragmentEntryLinkLocalService,
+				_groupLocalService, infoItemReferenceMapper,
+				_journalArticleLocalService, _jsonFactory, _layoutLocalService,
+				_portal, _portletPreferencesLocalService, _resourceActions,
 				_resourceLocalService, _resourcePermissionLocalService,
-				_saxReader);
+				_saxReader,
+				new WidgetTemplateMigrator(
+					_ddmTemplateLocalService, _portal,
+					new WidgetTemplateScriptRewriter(_jsonFactory)));
 
 		SiteNavigationMenuItemReferenceRewriter
 			siteNavigationMenuItemReferenceRewriter =

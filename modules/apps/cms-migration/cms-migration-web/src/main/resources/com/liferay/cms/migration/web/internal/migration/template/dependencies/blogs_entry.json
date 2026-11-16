@@ -1,0 +1,41 @@
+{
+	"className": "com.liferay.blogs.model.BlogsEntry",
+	"replacements": [
+		{
+			"from": "[$ENTRY$].getContent()",
+			"to": "([$ENTRY$].getValues().content!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getCoverImageCaption()",
+			"to": "([$ENTRY$].getValues().coverImageCaption!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getCoverImageFileEntryId()",
+			"to": "([$ENTRY$].getValues().coverImage!0)"
+		},
+		{
+			"from": "[$ENTRY$].getDescription()",
+			"to": "([$ENTRY$].getValues().description!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getEntryId()",
+			"to": "[$ENTRY$].getObjectEntryId()"
+		},
+		{
+			"from": "[$ENTRY$].getSmallImageFileEntryId()",
+			"to": "([$ENTRY$].getValues().smallImage!0)"
+		},
+		{
+			"from": "[$ENTRY$].getSubtitle()",
+			"to": "([$ENTRY$].getValues().subtitle!\"\")"
+		},
+		{
+			"from": "[$ENTRY$].getTitle()",
+			"to": "[$ENTRY$].getTitleValue(locale.toString())"
+		},
+		{
+			"from": "[$ENTRY$].getUrlTitle()",
+			"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+		}
+	]
+}

@@ -11,13 +11,10 @@ import com.liferay.asset.publisher.constants.AssetPublisherPortletKeys;
 import com.liferay.asset.publisher.util.AssetPublisherHelper;
 import com.liferay.blogs.constants.BlogsPortletKeys;
 import com.liferay.blogs.model.BlogsEntry;
-import com.liferay.cms.migration.web.internal.constants.CMSMigrationConstants;
 import com.liferay.cms.migration.web.internal.constants.CMSMigrationPortletKeys;
 import com.liferay.cms.migration.web.internal.migration.CMSMigrationContext;
+import com.liferay.cms.migration.web.internal.migration.template.WidgetTemplateMigrator;
 import com.liferay.document.library.constants.DLPortletKeys;
-import com.liferay.dynamic.data.mapping.constants.DDMTemplateConstants;
-import com.liferay.dynamic.data.mapping.model.DDMTemplate;
-import com.liferay.dynamic.data.mapping.service.DDMTemplateLocalService;
 import com.liferay.fragment.constants.FragmentConstants;
 import com.liferay.fragment.model.FragmentEntryLink;
 import com.liferay.fragment.service.FragmentEntryLinkLocalService;
@@ -46,11 +43,9 @@ import com.liferay.portal.kernel.service.permission.PortletPermissionUtil;
 import com.liferay.portal.kernel.settings.FallbackKeysSettingsUtil;
 import com.liferay.portal.kernel.settings.PortletInstanceSettingsLocator;
 import com.liferay.portal.kernel.settings.Settings;
-import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HashMapBuilder;
-import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PortletKeys;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -65,6 +60,7 @@ import com.liferay.portlet.display.template.PortletDisplayTemplate;
 import jakarta.portlet.PortletPreferences;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -87,7 +83,6 @@ public class PortletReferenceRewriter {
 		AssetEntryLocalService assetEntryLocalService,
 		AssetPublisherHelper assetPublisherHelper,
 		AssetQueryReferenceRewriter assetQueryReferenceRewriter,
-		DDMTemplateLocalService ddmTemplateLocalService,
 		FragmentEntryLinkLocalService fragmentEntryLinkLocalService,
 		GroupLocalService groupLocalService,
 		InfoItemReferenceMapper infoItemReferenceMapper,
@@ -98,12 +93,11 @@ public class PortletReferenceRewriter {
 		ResourceActions resourceActions,
 		ResourceLocalService resourceLocalService,
 		ResourcePermissionLocalService resourcePermissionLocalService,
-		SAXReader saxReader) {
+		SAXReader saxReader, WidgetTemplateMigrator widgetTemplateMigrator) {
 
 		_assetEntryLocalService = assetEntryLocalService;
 		_assetPublisherHelper = assetPublisherHelper;
 		_assetQueryReferenceRewriter = assetQueryReferenceRewriter;
-		_ddmTemplateLocalService = ddmTemplateLocalService;
 		_fragmentEntryLinkLocalService = fragmentEntryLinkLocalService;
 		_groupLocalService = groupLocalService;
 		_infoItemReferenceMapper = infoItemReferenceMapper;
@@ -116,14 +110,19 @@ public class PortletReferenceRewriter {
 		_resourceLocalService = resourceLocalService;
 		_resourcePermissionLocalService = resourcePermissionLocalService;
 		_saxReader = saxReader;
+		_widgetTemplateMigrator = widgetTemplateMigrator;
 	}
 
 	public void rewrite(CMSMigrationContext cmsMigrationContext, Layout layout)
 		throws Exception {
 
-		boolean updateLayoutModifiedDate =
-			UpdateLayoutModifiedDateThreadLocal.isUpdateLayoutModifiedDate() &&
-			!layout.isDraftLayout();
+		boolean updateLayoutModifiedDate = false;
+
+		if (UpdateLayoutModifiedDateThreadLocal.isUpdateLayoutModifiedDate() &&
+			!layout.isDraftLayout()) {
+
+			updateLayoutModifiedDate = true;
+		}
 
 		try (SafeCloseable safeCloseable =
 				UpdateLayoutModifiedDateThreadLocal.
@@ -216,41 +215,6 @@ public class PortletReferenceRewriter {
 		}
 
 		return preferences;
-	}
-
-	private String _getBlogsWidgetTemplateKey(
-			CMSMigrationContext cmsMigrationContext)
-		throws Exception {
-
-		long classNameId = _portal.getClassNameId(AssetEntry.class);
-
-		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
-			cmsMigrationContext.getSourceGroupId(), classNameId,
-			_BLOGS_WIDGET_TEMPLATE_KEY);
-
-		if (ddmTemplate != null) {
-			return ddmTemplate.getTemplateKey();
-		}
-
-		ddmTemplate = _ddmTemplateLocalService.addTemplate(
-			CMSMigrationConstants.
-				EXTERNAL_REFERENCE_CODE_PREFIX_WIDGET_TEMPLATE + "BLOGS",
-			cmsMigrationContext.getUserId(),
-			cmsMigrationContext.getSourceGroupId(), classNameId, 0,
-			_portal.getClassNameId(PortletDisplayTemplate.class),
-			_BLOGS_WIDGET_TEMPLATE_KEY,
-			HashMapBuilder.put(
-				LocaleUtil.getSiteDefault(), "Blogs (CMS Migration)"
-			).build(),
-			null, DDMTemplateConstants.TEMPLATE_TYPE_DISPLAY, StringPool.BLANK,
-			TemplateConstants.LANG_TYPE_FTL,
-			StringUtil.read(
-				PortletReferenceRewriter.class,
-				"dependencies/blogs_entries.ftl"),
-			true, false, StringPool.BLANK, null,
-			cmsMigrationContext.getServiceContext());
-
-		return ddmTemplate.getTemplateKey();
 	}
 
 	private JournalArticle _getJournalArticle(
@@ -346,12 +310,18 @@ public class PortletReferenceRewriter {
 		preferences.put(
 			"delta",
 			new String[] {portletPreferences.getValue("pageDelta", "5")});
+
+		String blogsWidgetTemplateKey =
+			_widgetTemplateMigrator.getBlogsWidgetTemplateKey(
+				cmsMigrationContext);
+
 		preferences.put(
 			"displayStyle",
 			new String[] {
 				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
-					_getBlogsWidgetTemplateKey(cmsMigrationContext)
+					blogsWidgetTemplateKey
 			});
+
 		preferences.put(
 			"displayStyleGroupExternalReferenceCode",
 			new String[] {sourceGroup.getExternalReferenceCode()});
@@ -676,16 +646,14 @@ public class PortletReferenceRewriter {
 
 		Set<String> scopeIds = new LinkedHashSet<>();
 
-		for (String scopeId :
-				portletPreferences.getValues(
-					"scopeIds",
-					new String[] {
-						AssetPublisherHelper.SCOPE_ID_GROUP_PREFIX +
-							layout.getGroupId()
-					})) {
-
-			scopeIds.add(scopeId);
-		}
+		Collections.addAll(
+			scopeIds,
+			portletPreferences.getValues(
+				"scopeIds",
+				new String[] {
+					AssetPublisherHelper.SCOPE_ID_GROUP_PREFIX +
+						layout.getGroupId()
+				}));
 
 		String label = "The Asset Publisher on " + layout.getFriendlyURL();
 		String selectionStyle = portletPreferences.getValue(
@@ -765,8 +733,8 @@ public class PortletReferenceRewriter {
 		if (displayStyle.startsWith(
 				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX)) {
 
-			_warnJournalSpecificWidgetTemplate(
-				cmsMigrationContext, displayStyle, label);
+			_widgetTemplateMigrator.migrate(
+				cmsMigrationContext, displayStyle, label, portletPreferences);
 		}
 		else if (displayStyle.equals("abstracts") ||
 				 displayStyle.equals("full-content")) {
@@ -872,44 +840,9 @@ public class PortletReferenceRewriter {
 		return sb.toString();
 	}
 
-	private void _warnJournalSpecificWidgetTemplate(
-		CMSMigrationContext cmsMigrationContext, String displayStyle,
-		String label) {
-
-		String templateKey = displayStyle.substring(
-			PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length());
-
-		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
-			cmsMigrationContext.getSourceGroupId(),
-			_portal.getClassNameId(AssetEntry.class), templateKey);
-
-		if (ddmTemplate == null) {
-			return;
-		}
-
-		String script = ddmTemplate.getScript();
-
-		if (script.contains("getArticle") ||
-			script.contains("JournalArticle") ||
-			script.contains("getDocument") || script.contains("BlogsEntry")) {
-
-			cmsMigrationContext.getCMSMigrationReport(
-			).addWarning(
-				StringBundler.concat(
-					label, " uses the widget template ", templateKey,
-					", which reads Web Content or Blogs APIs and must be ",
-					"adapted to object entries")
-			);
-		}
-	}
-
-	private static final String _BLOGS_WIDGET_TEMPLATE_KEY =
-		"CMS-MIGRATION-BLOGS";
-
 	private final AssetEntryLocalService _assetEntryLocalService;
 	private final AssetPublisherHelper _assetPublisherHelper;
 	private final AssetQueryReferenceRewriter _assetQueryReferenceRewriter;
-	private final DDMTemplateLocalService _ddmTemplateLocalService;
 	private final FragmentEntryLinkLocalService _fragmentEntryLinkLocalService;
 	private final GroupLocalService _groupLocalService;
 	private final InfoItemReferenceMapper _infoItemReferenceMapper;
@@ -924,5 +857,6 @@ public class PortletReferenceRewriter {
 	private final ResourcePermissionLocalService
 		_resourcePermissionLocalService;
 	private final SAXReader _saxReader;
+	private final WidgetTemplateMigrator _widgetTemplateMigrator;
 
 }
