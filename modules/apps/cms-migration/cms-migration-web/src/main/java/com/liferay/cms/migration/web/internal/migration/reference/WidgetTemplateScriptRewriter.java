@@ -74,17 +74,11 @@ public class WidgetTemplateScriptRewriter {
 			}
 		}
 
-		Set<String> variableNames = new LinkedHashSet<>();
+		script = _renameVariables(script);
 
-		Matcher matcher = _variablePattern.matcher(script);
+		Set<String> expressions = _getVariableNames(script);
 
-		while (matcher.find()) {
-			variableNames.add(matcher.group(1));
-		}
-
-		Set<String> expressions = new LinkedHashSet<>(variableNames);
-
-		matcher = _assetObjectPattern.matcher(script);
+		Matcher matcher = _assetObjectPattern.matcher(script);
 
 		while (matcher.find()) {
 			expressions.add(matcher.group());
@@ -148,26 +142,6 @@ public class WidgetTemplateScriptRewriter {
 			if (script.contains(unsupportedReference)) {
 				result._unsupportedReferences.add(unsupportedReference);
 			}
-		}
-
-		int count = 0;
-
-		for (String variableName : variableNames) {
-			count++;
-
-			String newVariableName = "objectEntry";
-
-			if (count > 1) {
-				newVariableName += count;
-			}
-
-			if (variableName.equals(newVariableName) ||
-				_hasVariable(script, newVariableName)) {
-
-				continue;
-			}
-
-			script = _renameVariable(newVariableName, script, variableName);
 		}
 
 		result._script = script;
@@ -263,6 +237,18 @@ public class WidgetTemplateScriptRewriter {
 		}
 
 		return script.length();
+	}
+
+	private Set<String> _getVariableNames(String script) {
+		Set<String> variableNames = new LinkedHashSet<>();
+
+		Matcher matcher = _variablePattern.matcher(script);
+
+		while (matcher.find()) {
+			variableNames.add(matcher.group(1));
+		}
+
+		return variableNames;
 	}
 
 	private boolean _hasVariable(String script, String variableName) {
@@ -368,6 +354,30 @@ public class WidgetTemplateScriptRewriter {
 		}
 
 		return sb.toString();
+	}
+
+	private String _renameVariables(String script) {
+		int count = 0;
+
+		for (String variableName : _getVariableNames(script)) {
+			count++;
+
+			String newVariableName = "objectEntry";
+
+			if (count > 1) {
+				newVariableName += count;
+			}
+
+			if (variableName.equals(newVariableName) ||
+				_hasVariable(script, newVariableName)) {
+
+				continue;
+			}
+
+			script = _renameVariable(newVariableName, script, variableName);
+		}
+
+		return script;
 	}
 
 	private static final String _BOUNDARY = "(?<![\\w.])";
