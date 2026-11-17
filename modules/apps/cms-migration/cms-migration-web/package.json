@@ -10,6 +10,7 @@
 		"@clayui/progress-bar": "^3.166.0",
 		"@clayui/tooltip": "^3.166.0",
 		"@liferay/layout-js-components-web": "*",
+		"frontend-js-components-web": "*",
 		"frontend-js-web": "*",
 		"react": "18.2.0"
 	},

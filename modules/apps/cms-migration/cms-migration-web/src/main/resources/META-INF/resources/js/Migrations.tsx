@@ -7,6 +7,7 @@ import ClayLabel, {LabelDisplayType} from '@clayui/label';
 import ClayLayout from '@clayui/layout';
 import ClayPanel from '@clayui/panel';
 import ClayProgressBar from '@clayui/progress-bar';
+import {useSessionState} from 'frontend-js-components-web';
 import {sub} from 'frontend-js-web';
 import React, {useEffect, useMemo} from 'react';
 
@@ -32,6 +33,19 @@ interface IProps {
 }
 
 export default function Migrations({migrationIncomplete, migrations}: IProps) {
+	const completedMigrations = migrations.filter(
+		(migration) => migration.completed
+	);
+	const [completedMigrationsExpanded, setCompletedMigrationsExpanded] =
+		useSessionState<boolean>('cms-migration-completed-migrations-expanded');
+	const incompleteMigrations = migrations.filter(
+		(migration) => !migration.completed
+	);
+
+	const numberFormat = useMemo(() => {
+		return new Intl.NumberFormat(Liferay.ThemeDisplay.getBCP47LanguageId());
+	}, []);
+
 	useEffect(() => {
 		if (!migrationIncomplete) {
 			return;
@@ -59,19 +73,60 @@ export default function Migrations({migrationIncomplete, migrations}: IProps) {
 					</div>
 				)}
 
-				{migrations.map((migration) => (
+				{incompleteMigrations.map((migration) => (
 					<Migration
 						key={migration.backgroundTaskId}
 						migration={migration}
+						numberFormat={numberFormat}
 					/>
 				))}
+
+				{!!completedMigrations.length && (
+					<ClayPanel
+						collapsable
+						displayTitle={sub(
+							Liferay.Language.get('x-y'),
+							Liferay.Language.get('completed'),
+							numberFormat.format(completedMigrations.length)
+						)}
+						displayType="secondary"
+						expanded={
+							completedMigrationsExpanded ?? !migrationIncomplete
+						}
+						onExpandedChange={setCompletedMigrationsExpanded}
+						showCollapseIcon
+						style={
+							{
+								'--panel-header-collapse-icon-right':
+									'var(--spacer-3)',
+							} as React.CSSProperties
+						}
+					>
+						<ClayPanel.Body className="text-body">
+							{completedMigrations.map((migration) => (
+								<Migration
+									key={migration.backgroundTaskId}
+									migration={migration}
+									numberFormat={numberFormat}
+								/>
+							))}
+						</ClayPanel.Body>
+					</ClayPanel>
+				)}
 			</ClayLayout.SheetSection>
 		</ClayLayout.Sheet>
 	);
 }
 
-function Migration({migration}: {migration: IMigration}) {
+function Migration({
+	migration,
+	numberFormat,
+}: {
+	migration: IMigration;
+	numberFormat: Intl.NumberFormat;
+}) {
 	const {
+		backgroundTaskId,
 		completed,
 		counts,
 		createDate,
@@ -85,10 +140,6 @@ function Migration({migration}: {migration: IMigration}) {
 		statusLabel,
 		warnings,
 	} = migration;
-
-	const numberFormat = useMemo(() => {
-		return new Intl.NumberFormat(Liferay.ThemeDisplay.getBCP47LanguageId());
-	}, []);
 
 	return (
 		<div className="border-bottom mb-3 pb-3">
@@ -142,6 +193,7 @@ function Migration({migration}: {migration: IMigration}) {
 							numberFormat.format(errors.length)
 						)}
 						messages={errors}
+						sessionKey={`cms-migration-errors-expanded-${backgroundTaskId}`}
 					/>
 
 					<Messages
@@ -151,6 +203,7 @@ function Migration({migration}: {migration: IMigration}) {
 							numberFormat.format(warnings.length)
 						)}
 						messages={warnings}
+						sessionKey={`cms-migration-warnings-expanded-${backgroundTaskId}`}
 					/>
 				</>
 			)}
@@ -162,11 +215,15 @@ function Messages({
 	className,
 	label,
 	messages,
+	sessionKey,
 }: {
 	className: string;
 	label: string;
 	messages: string[];
+	sessionKey: string;
 }) {
+	const [expanded, setExpanded] = useSessionState<boolean>(sessionKey);
+
 	if (!messages.length) {
 		return null;
 	}
@@ -179,6 +236,8 @@ function Messages({
 				<ClayPanel.Title className={className}>{label}</ClayPanel.Title>
 			}
 			displayType="unstyled"
+			expanded={!!expanded}
+			onExpandedChange={setExpanded}
 			showCollapseIcon
 			style={
 				{

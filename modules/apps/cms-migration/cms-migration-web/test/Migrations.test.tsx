@@ -122,7 +122,7 @@ describe('Migrations', () => {
 			/>
 		);
 
-		const [errors, warnings] = screen.getAllByRole('region');
+		const [, errors, warnings] = screen.getAllByRole('region');
 
 		expect(
 			screen.getByRole('button', {name: 'cms-migration-x-errors'})
