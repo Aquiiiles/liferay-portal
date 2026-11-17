@@ -159,32 +159,36 @@ public class HTMLReferenceRewriter {
 			return html;
 		}
 
-		html = _replace(
-			_documentsUUIDPattern, html,
-			matcher -> _getFileEntryURL(
-				cmsMigrationContext,
-				_fetchFileEntryByUuidAndGroupId(
-					matcher.group(4), GetterUtil.getLong(matcher.group(1)))));
-
-		html = _replace(
-			_documentsFriendlyURLPattern, html,
-			matcher -> _getFileEntryURL(
-				cmsMigrationContext,
-				_fetchFileEntryByFriendlyURL(
-					cmsMigrationContext, matcher.group(1), matcher.group(2))));
-
-		html = _replace(
-			_adaptiveMediaPattern, html,
-			matcher -> _getFileEntryURL(
-				cmsMigrationContext,
-				_fetchFileEntry(GetterUtil.getLong(matcher.group(1)))));
-
 		return _replace(
-			_fileEntryIdAttributePattern, html,
+			_fileReferencePattern, html,
 			matcher -> {
+				if (matcher.group("uuid") != null) {
+					return _getFileEntryURL(
+						cmsMigrationContext,
+						_fetchFileEntryByUuidAndGroupId(
+							matcher.group("uuid"),
+							GetterUtil.getLong(matcher.group("groupId"))));
+				}
+				else if (matcher.group("fileEntryFriendlyURL") != null) {
+					return _getFileEntryURL(
+						cmsMigrationContext,
+						_fetchFileEntryByFriendlyURL(
+							cmsMigrationContext,
+							matcher.group("groupFriendlyURL"),
+							matcher.group("fileEntryFriendlyURL")));
+				}
+				else if (matcher.group("adaptiveMediaFileEntryId") != null) {
+					return _getFileEntryURL(
+						cmsMigrationContext,
+						_fetchFileEntry(
+							GetterUtil.getLong(
+								matcher.group("adaptiveMediaFileEntryId"))));
+				}
+
 				FileEntry fileEntry = _getAttachmentFileEntry(
 					cmsMigrationContext,
-					_fetchFileEntry(GetterUtil.getLong(matcher.group(1))));
+					_fetchFileEntry(
+						GetterUtil.getLong(matcher.group("fileEntryId"))));
 
 				if (fileEntry == null) {
 					return null;
@@ -364,17 +368,16 @@ public class HTMLReferenceRewriter {
 	private static final Log _log = LogFactoryUtil.getLog(
 		HTMLReferenceRewriter.class);
 
-	private static final Pattern _adaptiveMediaPattern = Pattern.compile(
-		"/o/adaptive-media/image/(\\d+)/[^\"'\\s)]*");
 	private static final Pattern _blogsEntryPattern = Pattern.compile(
 		"/b/([^/\"'?#\\s)]+)");
-	private static final Pattern _documentsFriendlyURLPattern = Pattern.compile(
-		"/documents/d/([^/\"'?#\\s)]+)/([^/\"'?#\\s)]+)");
-	private static final Pattern _documentsUUIDPattern = Pattern.compile(
-		"/documents/(\\d+)/(\\d+)/([^/\"'?#\\s)]+)/([0-9a-fA-F-]{36})" +
-			"[^\"'\\s)]*");
-	private static final Pattern _fileEntryIdAttributePattern = Pattern.compile(
-		"data-fileentryid=\"(\\d+)\"");
+	private static final Pattern _fileReferencePattern = Pattern.compile(
+		StringBundler.concat(
+			"/documents/(?<groupId>\\d+)/\\d+/[^/\"'?#\\s)]+",
+			"/(?<uuid>[0-9a-fA-F-]{36})[^\"'\\s)]*",
+			"|/documents/d/(?<groupFriendlyURL>[^/\"'?#\\s)]+)",
+			"/(?<fileEntryFriendlyURL>[^/\"'?#\\s)]+)",
+			"|/o/adaptive-media/image/(?<adaptiveMediaFileEntryId>\\d+)",
+			"/[^\"'\\s)]*|data-fileentryid=\"(?<fileEntryId>\\d+)\""));
 	private static final Pattern _journalArticlePattern = Pattern.compile(
 		"/w/([^/\"'?#\\s)]+)");
 
