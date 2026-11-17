@@ -45,24 +45,6 @@ public class WidgetTemplateScriptRewriterTest {
 				"${(objectEntry.getURLTitle(locale)!\"\")}",
 			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
 				"${blogsEntry.getUrlTitle()}");
-	}
-
-	@Test
-	public void testRewriteWithChangedMethod() {
-		WidgetTemplateScriptRewriter.Result result =
-			_widgetTemplateScriptRewriter.rewrite(
-				BlogsEntry.class.getName(),
-				"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
-					"${blogsEntry.getGroupId()}");
-
-		Assert.assertEquals(
-			SetUtil.fromArray("getGroupId"), result.getChangedMethodNames());
-		Assert.assertEquals(
-			Collections.emptySet(), result.getUnsupportedMethodNames());
-	}
-
-	@Test
-	public void testRewriteWithExistingObjectEntryVariable() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
 			"<#assign objectEntry = 1 blogsEntry = " +
@@ -70,29 +52,17 @@ public class WidgetTemplateScriptRewriterTest {
 					"${(blogsEntry.getURLTitle(locale)!\"\")}",
 			"<#assign objectEntry = 1 blogsEntry = " +
 				"assetRenderer.getAssetObject() />${blogsEntry.getUrlTitle()}");
-	}
-
-	@Test
-	public void testRewriteWithInlineExpression() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
 			"${(curEntry.getAssetRenderer().getAssetObject().getValues()." +
 				"subtitle!\"\")}",
 			"${curEntry.getAssetRenderer().getAssetObject().getSubtitle()}");
-	}
-
-	@Test
-	public void testRewriteWithJournalArticle() {
 		_assertRewrite(
 			JournalArticle.class.getName(),
 			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
 				"${objectEntry.getTitleValue(locale.toString())}",
 			"<#assign article = assetRenderer.getArticle() />" +
 				"${article.getTitle(locale)}");
-	}
-
-	@Test
-	public void testRewriteWithProperty() {
 		_assertRewrite(
 			BlogsEntry.class.getName(),
 			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
@@ -100,10 +70,7 @@ public class WidgetTemplateScriptRewriterTest {
 					"${objectEntry.titleMap}",
 			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
 				"${blogsEntry.title}${blogsEntry.titleMap}");
-	}
 
-	@Test
-	public void testRewriteWithServiceLocator() {
 		String serviceScript = StringBundler.concat(
 			"<#assign journalArticleLocalService = ",
 			"serviceLocator.findService(\"com.liferay.journal.service.",
@@ -119,10 +86,9 @@ public class WidgetTemplateScriptRewriterTest {
 				serviceScript, "<#list entries as curEntry><#assign article = ",
 				"journalArticleLocalService.fetchLatestArticle(curEntry.",
 				"getClassPK()) />${article.getTitle(locale)}</#list>"));
-	}
+		_assertRewrite(
+			JournalArticle.class.getName(), serviceScript, serviceScript);
 
-	@Test
-	public void testRewriteWithServiceLocatorAndInlineCall() {
 		_assertRewrite(
 			JournalArticle.class.getName(),
 			StringBundler.concat(
@@ -134,6 +100,90 @@ public class WidgetTemplateScriptRewriterTest {
 				"serviceLocator.findService(\"com.liferay.journal.service.",
 				"JournalArticleLocalService\").fetchLatestArticle(curEntry.",
 				"classPK) />${article.getTitle(locale)}</#list>"));
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				"<#assign\n\tuserLocalService = serviceLocator.findService(",
+				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${userLocalService.getUsersCount()}</#list>"),
+			StringBundler.concat(
+				"<#assign\n\tjournalArticleLocalService = ",
+				"serviceLocator.findService(\"com.liferay.journal.service.",
+				"JournalArticleLocalService\")\n\tuserLocalService = ",
+				"serviceLocator.findService(",
+				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
+				"<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalService.fetchLatestArticle(curEntry.",
+				"getClassPK()) />${userLocalService.getUsersCount()}</#list>"));
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			StringBundler.concat(
+				"<#assign objectEntry = assetRenderer.getAssetObject() ",
+				"objectEntry2 = curEntry.getAssetRenderer().getAssetObject() ",
+				"/>${objectEntry.getUserName()}",
+				"${objectEntry2.getUserName()}"),
+			StringBundler.concat(
+				"<#assign first = assetRenderer.getAssetObject() second = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${first.getUserName()}${second.getUserName()}"));
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
+			StringBundler.concat(
+				"<#assign journalArticleLocalServiceUtil = ",
+				"staticUtil[\"com.liferay.journal.service.",
+				"JournalArticleLocalServiceUtil\"] />",
+				"<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalServiceUtil.fetchLatestArticle(curEntry.",
+				"getClassPK()) />${article.getTitle(locale)}</#list>"));
+
+		String script =
+			"<#assign entry = assetRenderer.getAssetObject() />" +
+				"${entry.getUrlTitle()}";
+
+		_assertRewrite(RandomTestUtil.randomString(), script, script);
+
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
+				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
+					"${other.blogsEntry.getTitle()}",
+			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
+				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
+					"${other.blogsEntry.getTitle()}");
+		_assertRewrite(
+			BlogsEntry.class.getName(),
+			StringBundler.concat(
+				"<#-- entry --><#assign objectEntry = ",
+				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
+				"<#if objectEntry.getUserName()?has_content>",
+				"<a href=\"/entry/${objectEntry.getUserName()}\">",
+				"${\"entry ${objectEntry.getUserName()}\"}</a></#if></div>"),
+			StringBundler.concat(
+				"<#-- entry --><#assign entry = ",
+				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
+				"<#if entry.getUserName()?has_content>",
+				"<a href=\"/entry/${entry.getUserName()}\">",
+				"${\"entry ${entry.getUserName()}\"}</a></#if></div>"));
+	}
+
+	@Test
+	public void testRewriteWithChangedMethod() {
+		WidgetTemplateScriptRewriter.Result result =
+			_widgetTemplateScriptRewriter.rewrite(
+				BlogsEntry.class.getName(),
+				"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
+					"${blogsEntry.getGroupId()}");
+
+		Assert.assertEquals(
+			SetUtil.fromArray("getGroupId"), result.getChangedMethodNames());
+		Assert.assertEquals(
+			Collections.emptySet(), result.getUnsupportedMethodNames());
 	}
 
 	@Test
@@ -166,27 +216,6 @@ public class WidgetTemplateScriptRewriterTest {
 	}
 
 	@Test
-	public void testRewriteWithServiceLocatorAndSeveralAssignments() {
-		_assertRewrite(
-			JournalArticle.class.getName(),
-			StringBundler.concat(
-				"<#assign\n\tuserLocalService = serviceLocator.findService(",
-				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
-				"<#list entries as curEntry><#assign objectEntry = ",
-				"curEntry.getAssetRenderer().getAssetObject() />",
-				"${userLocalService.getUsersCount()}</#list>"),
-			StringBundler.concat(
-				"<#assign\n\tjournalArticleLocalService = ",
-				"serviceLocator.findService(\"com.liferay.journal.service.",
-				"JournalArticleLocalService\")\n\tuserLocalService = ",
-				"serviceLocator.findService(",
-				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
-				"<#list entries as curEntry><#assign article = ",
-				"journalArticleLocalService.fetchLatestArticle(curEntry.",
-				"getClassPK()) />${userLocalService.getUsersCount()}</#list>"));
-	}
-
-	@Test
 	public void testRewriteWithServiceLocatorAndUnrelatedVariable() {
 		String script = StringBundler.concat(
 			"<#list entries as curEntry><#assign article = ",
@@ -200,48 +229,6 @@ public class WidgetTemplateScriptRewriterTest {
 		Assert.assertEquals(script, result.getScript());
 		Assert.assertEquals(
 			Collections.emptySet(), result.getUnsupportedServiceCalls());
-	}
-
-	@Test
-	public void testRewriteWithServiceLocatorAndUnusedService() {
-		String script = StringBundler.concat(
-			"<#assign journalArticleLocalService = ",
-			"serviceLocator.findService(\"com.liferay.journal.service.",
-			"JournalArticleLocalService\") />");
-
-		_assertRewrite(JournalArticle.class.getName(), script, script);
-	}
-
-	@Test
-	public void testRewriteWithSeveralVariables() {
-		_assertRewrite(
-			BlogsEntry.class.getName(),
-			StringBundler.concat(
-				"<#assign objectEntry = assetRenderer.getAssetObject() ",
-				"objectEntry2 = curEntry.getAssetRenderer().getAssetObject() ",
-				"/>${objectEntry.getUserName()}",
-				"${objectEntry2.getUserName()}"),
-			StringBundler.concat(
-				"<#assign first = assetRenderer.getAssetObject() second = ",
-				"curEntry.getAssetRenderer().getAssetObject() />",
-				"${first.getUserName()}${second.getUserName()}"));
-	}
-
-	@Test
-	public void testRewriteWithStaticUtil() {
-		_assertRewrite(
-			JournalArticle.class.getName(),
-			StringBundler.concat(
-				"<#list entries as curEntry><#assign objectEntry = ",
-				"curEntry.getAssetRenderer().getAssetObject() />",
-				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
-			StringBundler.concat(
-				"<#assign journalArticleLocalServiceUtil = ",
-				"staticUtil[\"com.liferay.journal.service.",
-				"JournalArticleLocalServiceUtil\"] />",
-				"<#list entries as curEntry><#assign article = ",
-				"journalArticleLocalServiceUtil.fetchLatestArticle(curEntry.",
-				"getClassPK()) />${article.getTitle(locale)}</#list>"));
 	}
 
 	@Test
@@ -271,27 +258,6 @@ public class WidgetTemplateScriptRewriterTest {
 	}
 
 	@Test
-	public void testRewriteWithUnknownClassName() {
-		String script =
-			"<#assign entry = assetRenderer.getAssetObject() />" +
-				"${entry.getUrlTitle()}";
-
-		_assertRewrite(RandomTestUtil.randomString(), script, script);
-	}
-
-	@Test
-	public void testRewriteWithUnrelatedVariable() {
-		_assertRewrite(
-			BlogsEntry.class.getName(),
-			"<#assign objectEntry = assetRenderer.getAssetObject() />" +
-				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
-					"${other.blogsEntry.getTitle()}",
-			"<#assign blogsEntry = assetRenderer.getAssetObject() />" +
-				"${layout.getTitle()}${myblogsEntry.getTitle()}" +
-					"${other.blogsEntry.getTitle()}");
-	}
-
-	@Test
 	public void testRewriteWithUnsupportedMethod() {
 		WidgetTemplateScriptRewriter.Result result =
 			_widgetTemplateScriptRewriter.rewrite(
@@ -316,24 +282,6 @@ public class WidgetTemplateScriptRewriterTest {
 		Assert.assertEquals(
 			SetUtil.fromArray("com.liferay.blogs.model.BlogsEntry"),
 			result.getUnsupportedReferences());
-	}
-
-	@Test
-	public void testRewriteWithVariableNameInText() {
-		_assertRewrite(
-			BlogsEntry.class.getName(),
-			StringBundler.concat(
-				"<#-- entry --><#assign objectEntry = ",
-				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
-				"<#if objectEntry.getUserName()?has_content>",
-				"<a href=\"/entry/${objectEntry.getUserName()}\">",
-				"${\"entry ${objectEntry.getUserName()}\"}</a></#if></div>"),
-			StringBundler.concat(
-				"<#-- entry --><#assign entry = ",
-				"assetRenderer.getAssetObject() /><div class=\"entry\">entry ",
-				"<#if entry.getUserName()?has_content>",
-				"<a href=\"/entry/${entry.getUserName()}\">",
-				"${\"entry ${entry.getUserName()}\"}</a></#if></div>"));
 	}
 
 	private void _assertRewrite(
