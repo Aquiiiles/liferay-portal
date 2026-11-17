@@ -73,27 +73,6 @@ public class WidgetTemplateMigrator {
 		_widgetTemplateScriptRewriter = widgetTemplateScriptRewriter;
 	}
 
-	public void addWidgetTemplate(
-		CMSMigrationContext cmsMigrationContext, String displayStyle,
-		long displayStyleGroupId, String label) {
-
-		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
-			displayStyleGroupId, _portal.getClassNameId(AssetEntry.class),
-			displayStyle.substring(
-				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length()),
-			true);
-
-		if (ddmTemplate == null) {
-			return;
-		}
-
-		_messagePrefixes.putIfAbsent(
-			ddmTemplate.getTemplateId(),
-			StringBundler.concat(
-				label, " uses the widget template ",
-				CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ", which "));
-	}
-
 	public String getBlogsWidgetTemplateKey(
 			CMSMigrationContext cmsMigrationContext)
 		throws Exception {
@@ -153,6 +132,27 @@ public class WidgetTemplateMigrator {
 		}
 
 		_messagePrefixes.clear();
+	}
+
+	public void registerWidgetTemplate(
+		CMSMigrationContext cmsMigrationContext, String displayStyle,
+		long displayStyleGroupId, String label) {
+
+		DDMTemplate ddmTemplate = _ddmTemplateLocalService.fetchTemplate(
+			displayStyleGroupId, _portal.getClassNameId(AssetEntry.class),
+			displayStyle.substring(
+				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX.length()),
+			true);
+
+		if (ddmTemplate == null) {
+			return;
+		}
+
+		_messagePrefixes.putIfAbsent(
+			ddmTemplate.getTemplateId(),
+			StringBundler.concat(
+				label, " uses the widget template ",
+				CMSMigrationDDMTemplateUtil.getLabel(ddmTemplate), ", which "));
 	}
 
 	private Set<String> _getListedSourceClassNames(

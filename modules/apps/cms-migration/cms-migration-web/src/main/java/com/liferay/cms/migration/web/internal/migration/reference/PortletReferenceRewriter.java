@@ -761,7 +761,7 @@ public class PortletReferenceRewriter {
 		if (displayStyle.startsWith(
 				PortletDisplayTemplate.DISPLAY_STYLE_PREFIX)) {
 
-			_widgetTemplateMigrator.addWidgetTemplate(
+			_widgetTemplateMigrator.registerWidgetTemplate(
 				cmsMigrationContext, displayStyle,
 				_getDisplayStyleGroupId(
 					cmsMigrationContext, portletPreferences),
