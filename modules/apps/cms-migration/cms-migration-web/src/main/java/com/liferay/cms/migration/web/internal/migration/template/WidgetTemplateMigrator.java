@@ -49,6 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Albert Gomes Cabral
@@ -428,11 +430,30 @@ public class WidgetTemplateMigrator {
 					"adapted to object entries"));
 		}
 
-		if (script.contains("serviceLocator")) {
+		Set<String> unsupportedServiceCalls =
+			result.getUnsupportedServiceCalls();
+
+		if (SetUtil.isNotEmpty(unsupportedServiceCalls)) {
+			cmsMigrationReport.addWarning(
+				StringBundler.concat(
+					messagePrefix, "calls ",
+					StringUtil.merge(
+						unsupportedServiceCalls, StringPool.COMMA_AND_SPACE),
+					", which cannot be rewritten, so it must be adapted to ",
+					"object entries"));
+
+			return;
+		}
+
+		script = result.getScript();
+
+		Matcher matcher = _staticUtilPattern.matcher(script);
+
+		if (script.contains("serviceLocator") || matcher.find()) {
 			cmsMigrationReport.addWarning(
 				messagePrefix +
-					"uses serviceLocator to read classic services and must " +
-						"be adapted to object entries");
+					"uses serviceLocator or staticUtil to read classic " +
+						"services and must be adapted to object entries");
 		}
 	}
 
@@ -480,6 +501,9 @@ public class WidgetTemplateMigrator {
 
 	private static final String _BLOGS_WIDGET_TEMPLATE_KEY =
 		"CMS-MIGRATION-BLOGS";
+
+	private static final Pattern _staticUtilPattern = Pattern.compile(
+		"staticUtil\\[\\s*[\"']com\\.liferay\\.(?:blogs|journal)\\.");
 
 	private final DDMTemplateLocalService _ddmTemplateLocalService;
 	private final Map<Long, String> _messagePrefixes = new LinkedHashMap<>();

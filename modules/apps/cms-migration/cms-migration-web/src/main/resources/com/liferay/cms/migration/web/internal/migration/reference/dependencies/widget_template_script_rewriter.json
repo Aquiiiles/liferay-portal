@@ -1,0 +1,132 @@
+{
+	"models": {
+		"com.liferay.blogs.model.BlogsEntry": {
+			"changedMethodNames": [
+				"getExternalReferenceCode",
+				"getGroupId",
+				"getModelClassName",
+				"getUuid"
+			],
+			"replacements": [
+				{
+					"from": "[$ENTRY$].getContent()",
+					"to": "([$ENTRY$].getValues().content!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getCoverImageCaption()",
+					"to": "([$ENTRY$].getValues().coverImageCaption!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getCoverImageFileEntryId()",
+					"to": "([$ENTRY$].getValues().coverImage!0)"
+				},
+				{
+					"from": "[$ENTRY$].getDescription()",
+					"to": "([$ENTRY$].getValues().description!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getEntryId()",
+					"to": "[$ENTRY$].getObjectEntryId()"
+				},
+				{
+					"from": "[$ENTRY$].getSmallImageFileEntryId()",
+					"to": "([$ENTRY$].getValues().smallImage!0)"
+				},
+				{
+					"from": "[$ENTRY$].getSubtitle()",
+					"to": "([$ENTRY$].getValues().subtitle!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getTitle()",
+					"to": "[$ENTRY$].getTitleValue(locale.toString())"
+				},
+				{
+					"from": "[$ENTRY$].getUrlTitle()",
+					"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+				}
+			],
+			"unsupportedReferences": [
+				"BlogsEntryLocalService",
+				"BlogsEntryService",
+				"com.liferay.blogs.model.BlogsEntry"
+			]
+		},
+		"com.liferay.journal.model.JournalArticle": {
+			"changedMethodNames": [
+				"getExternalReferenceCode",
+				"getGroupId",
+				"getModelClassName",
+				"getUuid"
+			],
+			"replacements": [
+				{
+					"from": ".getArticle()",
+					"to": ".getAssetObject()"
+				},
+				{
+					"from": "[$ENTRY$].getDescription()",
+					"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getDescription(locale)",
+					"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getDescriptionCurrentValue()",
+					"to": "(([$ENTRY$].getValues().description_i18n[locale.toString()])!([$ENTRY$].getValues().description)!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getResourcePrimKey()",
+					"to": "[$ENTRY$].getObjectEntryId()"
+				},
+				{
+					"from": "[$ENTRY$].getTitle()",
+					"to": "[$ENTRY$].getTitleValue(locale.toString())"
+				},
+				{
+					"from": "[$ENTRY$].getTitle(locale)",
+					"to": "[$ENTRY$].getTitleValue(locale.toString())"
+				},
+				{
+					"from": "[$ENTRY$].getTitleCurrentValue()",
+					"to": "[$ENTRY$].getTitleValue(locale.toString())"
+				},
+				{
+					"from": "[$ENTRY$].getUrlTitle()",
+					"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+				},
+				{
+					"from": "[$ENTRY$].getUrlTitle(locale)",
+					"to": "([$ENTRY$].getURLTitle(locale)!\"\")"
+				}
+			],
+			"unsupportedReferences": [
+				"JournalArticleLocalService",
+				"JournalArticleService",
+				"com.liferay.journal.model.JournalArticle"
+			]
+		}
+	},
+	"services": {
+		"com.liferay.journal.service.JournalArticleLocalService": {
+			"replacements": [
+				{
+					"from": "fetchLatestArticle([$ASSET_ENTRY$].classPK)",
+					"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+				},
+				{
+					"from": "fetchLatestArticle([$ASSET_ENTRY$].getClassPK())",
+					"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+				},
+				{
+					"from": "getLatestArticle([$ASSET_ENTRY$].classPK)",
+					"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+				},
+				{
+					"from": "getLatestArticle([$ASSET_ENTRY$].getClassPK())",
+					"to": "[$ASSET_ENTRY$].getAssetRenderer().getAssetObject()"
+				}
+			]
+		}
+	}
+}

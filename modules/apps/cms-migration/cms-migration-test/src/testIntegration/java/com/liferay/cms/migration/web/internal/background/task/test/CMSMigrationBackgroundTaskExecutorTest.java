@@ -2405,6 +2405,83 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 	}
 
 	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateWithServiceLocator()
+		throws Exception {
+
+		String title = RandomTestUtil.randomString();
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			JournalArticleConstants.CLASS_NAME_ID_DEFAULT, title,
+			RandomTestUtil.randomString(), RandomTestUtil.randomString(),
+			LocaleUtil.getSiteDefault(), false, true,
+			ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				"<#assign journalArticleLocalService = ",
+				"serviceLocator.findService(\"com.liferay.journal.service.",
+				"JournalArticleLocalService\") /><#list entries as curEntry>",
+				"<#assign article = journalArticleLocalService.",
+				"fetchLatestArticle(curEntry.getClassPK()) />",
+				"${article.getTitle(locale)}</#list>"));
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(JournalArticle.class))
+				}
+			).put(
+				"anyClassTypeJournalArticleAssetRendererFactory",
+				new String[] {
+					String.valueOf(journalArticle.getDDMStructureId())
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertFalse(
+			statusMessage, statusMessage.contains("must be adapted"));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
+			ddmTemplate.getScript());
+
+		Assert.assertEquals(
+			title,
+			_renderAssetPublisherWidgetTemplate(
+				layout, _getObjectEntry(journalArticle),
+				ddmTemplate.getTemplateKey()));
+	}
+
+	@Test
 	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateWithUnsupportedMethod()
 		throws Exception {
 
@@ -2457,6 +2534,83 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 					ddmTemplate.getTemplateId(), ", key ",
 					ddmTemplate.getTemplateKey(),
 					"), which calls getCoverImageURL on blog entries")));
+	}
+
+	@Test
+	public void testExecuteWithRewritePagesAndAssetPublisherWidgetTemplateWithUnsupportedServiceCall()
+		throws Exception {
+
+		JournalArticle journalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		String serviceScript = StringBundler.concat(
+			"<#assign journalArticleLocalServiceUtil = ",
+			"staticUtil[\"com.liferay.journal.service.",
+			"JournalArticleLocalServiceUtil\"] />");
+
+		DDMTemplate ddmTemplate = _addWidgetTemplate(
+			StringBundler.concat(
+				serviceScript, "<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalServiceUtil.getLatestArticle(curEntry.",
+				"classPK) />${journalArticleLocalServiceUtil.",
+				"getArticlesCount(curEntry.getGroupId())}</#list>"));
+
+		Layout layout = LayoutTestUtil.addTypePortletLayout(_group);
+
+		LayoutTestUtil.addPortletToLayout(
+			layout, AssetPublisherPortletKeys.ASSET_PUBLISHER,
+			HashMapBuilder.put(
+				"anyAssetType",
+				new String[] {
+					String.valueOf(_portal.getClassNameId(JournalArticle.class))
+				}
+			).put(
+				"anyClassTypeJournalArticleAssetRendererFactory",
+				new String[] {
+					String.valueOf(journalArticle.getDDMStructureId())
+				}
+			).put(
+				"displayStyle",
+				new String[] {
+					PortletDisplayTemplate.DISPLAY_STYLE_PREFIX +
+						ddmTemplate.getTemplateKey()
+				}
+			).put(
+				"displayStyleGroupId",
+				new String[] {String.valueOf(_group.getGroupId())}
+			).put(
+				"selectionStyle", new String[] {"dynamic"}
+			).build());
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				StringBundler.concat(
+					"uses the widget template ",
+					ddmTemplate.getName(LocaleUtil.getSiteDefault()), " (ID ",
+					ddmTemplate.getTemplateId(), ", key ",
+					ddmTemplate.getTemplateKey(),
+					"), which calls JournalArticleLocalService.",
+					"getArticlesCount, which cannot be rewritten")));
+
+		ddmTemplate = _ddmTemplateLocalService.getTemplate(
+			ddmTemplate.getTemplateId());
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				serviceScript, "<#list entries as curEntry><#assign ",
+				"objectEntry = curEntry.getAssetRenderer().getAssetObject() />",
+				"${journalArticleLocalServiceUtil.getArticlesCount(",
+				"curEntry.getGroupId())}</#list>"),
+			ddmTemplate.getScript());
 	}
 
 	@Test

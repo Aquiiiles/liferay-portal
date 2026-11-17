@@ -17,7 +17,7 @@ import com.liferay.portal.kernel.util.StringUtil;
 
 import java.lang.reflect.Method;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -32,16 +32,13 @@ public class WidgetTemplateScriptRewriter {
 	public WidgetTemplateScriptRewriter(JSONFactory jsonFactory)
 		throws Exception {
 
-		for (String fileName :
-				new String[] {"blogs_entry.json", "journal_article.json"}) {
+		JSONObject jsonObject = jsonFactory.createJSONObject(
+			StringUtil.read(
+				WidgetTemplateScriptRewriter.class,
+				"dependencies/widget_template_script_rewriter.json"));
 
-			JSONObject jsonObject = jsonFactory.createJSONObject(
-				StringUtil.read(
-					WidgetTemplateScriptRewriter.class,
-					"dependencies/" + fileName));
-
-			_jsonObjects.put(jsonObject.getString("className"), jsonObject);
-		}
+		_modelsJSONObject = jsonObject.getJSONObject("models");
+		_servicesJSONObject = jsonObject.getJSONObject("services");
 
 		for (Method method : ObjectEntry.class.getMethods()) {
 			_objectEntryMethodNames.add(method.getName());
@@ -51,13 +48,17 @@ public class WidgetTemplateScriptRewriter {
 	public Result rewrite(String className, String script) {
 		Result result = new Result();
 
-		JSONObject jsonObject = _jsonObjects.get(className);
+		JSONObject jsonObject = _modelsJSONObject.getJSONObject(className);
 
 		if (jsonObject == null) {
 			result._script = script;
 
 			return result;
 		}
+
+		String originalScript = script;
+
+		script = _replaceServiceCalls(result, script);
 
 		JSONArray replacementsJSONArray = jsonObject.getJSONArray(
 			"replacements");
@@ -72,14 +73,8 @@ public class WidgetTemplateScriptRewriter {
 				continue;
 			}
 
-			String to = replacementJSONObject.getString("to");
-
-			if (from.contains(_PLACEHOLDER_ASSET_ENTRY)) {
-				script = _replaceAssetEntryExpressions(from, script, to);
-			}
-			else {
-				script = StringUtil.replace(script, from, to);
-			}
+			script = StringUtil.replace(
+				script, from, replacementJSONObject.getString("to"));
 		}
 
 		script = _renameVariables(script);
@@ -137,6 +132,8 @@ public class WidgetTemplateScriptRewriter {
 			}
 		}
 
+		script = _removeServiceVariables(originalScript, script);
+
 		for (String unsupportedReference :
 				JSONUtil.toStringList(
 					jsonObject.getJSONArray("unsupportedReferences"))) {
@@ -169,11 +166,17 @@ public class WidgetTemplateScriptRewriter {
 			return _unsupportedReferences;
 		}
 
+		public Set<String> getUnsupportedServiceCalls() {
+			return _unsupportedServiceCalls;
+		}
+
 		private final Set<String> _changedMethodNames = new LinkedHashSet<>();
 		private String _script;
 		private final Set<String> _unsupportedMethodNames =
 			new LinkedHashSet<>();
 		private final Set<String> _unsupportedReferences =
+			new LinkedHashSet<>();
+		private final Set<String> _unsupportedServiceCalls =
 			new LinkedHashSet<>();
 
 	}
@@ -272,6 +275,49 @@ public class WidgetTemplateScriptRewriter {
 		Matcher matcher = pattern.matcher(script);
 
 		return matcher.find();
+	}
+
+	private String _removeServiceVariables(
+		String originalScript, String script) {
+
+		Set<String> serviceVariableNames = new LinkedHashSet<>();
+
+		Matcher matcher = _serviceVariablePattern.matcher(originalScript);
+
+		while (matcher.find()) {
+			if (matcher.group(1) != null) {
+				serviceVariableNames.add(matcher.group(1));
+			}
+		}
+
+		for (String serviceVariableName : serviceVariableNames) {
+			Pattern pattern = Pattern.compile(
+				StringBundler.concat(
+					_BOUNDARY, Pattern.quote(serviceVariableName),
+					"\\s*=\\s*(?:serviceLocator\\.findService\\(\\s*(?:",
+					"\"[^\"]*\"|'[^']*')\\s*\\)|staticUtil\\[\\s*(?:",
+					"\"[^\"]*\"|'[^']*')\\s*\\])\\s*"));
+
+			matcher = pattern.matcher(originalScript);
+
+			if (!_hasVariable(matcher.replaceAll(""), serviceVariableName)) {
+				continue;
+			}
+
+			matcher = pattern.matcher(script);
+
+			String newScript = matcher.replaceAll("");
+
+			if (_hasVariable(newScript, serviceVariableName)) {
+				continue;
+			}
+
+			script = newScript;
+		}
+
+		matcher = _emptyAssignmentPattern.matcher(script);
+
+		return matcher.replaceAll("");
 	}
 
 	private String _renameExpressionVariable(
@@ -394,19 +440,91 @@ public class WidgetTemplateScriptRewriter {
 		return script;
 	}
 
-	private String _replaceAssetEntryExpressions(
-		String from, String script, String to) {
+	private String _replaceServiceCalls(Result result, String script) {
+		Map<String, Set<String>> serviceVariableNames = new LinkedHashMap<>();
 
-		String regex = StringUtil.replace(
-			Pattern.quote(from),
-			new String[] {_PLACEHOLDER_ASSET_ENTRY, _PLACEHOLDER_SERVICE},
-			new String[] {"\\E(\\w+)\\Q", "\\E\\w+\\Q"});
+		Matcher matcher = _serviceVariablePattern.matcher(script);
 
-		return script.replaceAll(
-			_BOUNDARY + regex,
-			StringUtil.replace(
-				Matcher.quoteReplacement(to),
-				Matcher.quoteReplacement(_PLACEHOLDER_ASSET_ENTRY), "$1"));
+		while (matcher.find()) {
+			String className = matcher.group(2);
+
+			if (className == null) {
+				className = matcher.group(3);
+			}
+
+			serviceVariableNames.computeIfAbsent(
+				className, key -> new LinkedHashSet<>());
+
+			if (matcher.group(1) != null) {
+				Set<String> variableNames = serviceVariableNames.get(className);
+
+				variableNames.add(matcher.group(1));
+			}
+		}
+
+		for (Map.Entry<String, Set<String>> entry :
+				serviceVariableNames.entrySet()) {
+
+			String className = entry.getKey();
+
+			JSONObject jsonObject = _servicesJSONObject.getJSONObject(
+				className);
+
+			if (jsonObject == null) {
+				continue;
+			}
+
+			StringBundler sb = new StringBundler();
+
+			sb.append(_BOUNDARY);
+			sb.append("(?:");
+
+			for (String variableName : entry.getValue()) {
+				sb.append(Pattern.quote(variableName));
+				sb.append(StringPool.PIPE);
+			}
+
+			sb.append("serviceLocator\\.findService\\(\\s*[\"']");
+			sb.append(Pattern.quote(className));
+			sb.append("[\"']\\s*\\)|staticUtil\\[\\s*[\"']");
+			sb.append(Pattern.quote(className + "Util"));
+			sb.append("[\"']\\s*\\])\\.");
+
+			String serviceRegex = sb.toString();
+
+			JSONArray replacementsJSONArray = jsonObject.getJSONArray(
+				"replacements");
+
+			for (int i = 0; i < replacementsJSONArray.length(); i++) {
+				JSONObject replacementJSONObject =
+					replacementsJSONArray.getJSONObject(i);
+
+				String regex = StringUtil.replace(
+					Pattern.quote(replacementJSONObject.getString("from")),
+					_PLACEHOLDER_ASSET_ENTRY, "\\E(\\w+)\\Q");
+
+				script = script.replaceAll(
+					serviceRegex + regex,
+					StringUtil.replace(
+						Matcher.quoteReplacement(
+							replacementJSONObject.getString("to")),
+						Matcher.quoteReplacement(_PLACEHOLDER_ASSET_ENTRY),
+						"$1"));
+			}
+
+			Pattern pattern = Pattern.compile(serviceRegex + "(\\w+)\\(");
+
+			matcher = pattern.matcher(script);
+
+			while (matcher.find()) {
+				result._unsupportedServiceCalls.add(
+					StringBundler.concat(
+						StringUtil.extractLast(className, CharPool.PERIOD),
+						StringPool.PERIOD, matcher.group(1)));
+			}
+		}
+
+		return script;
 	}
 
 	private static final String _BOUNDARY = "(?<![\\w.])";
@@ -415,17 +533,25 @@ public class WidgetTemplateScriptRewriter {
 
 	private static final String _PLACEHOLDER_ASSET_ENTRY = "[$ASSET_ENTRY$]";
 
-	private static final String _PLACEHOLDER_SERVICE = "[$SERVICE$]";
-
 	private static final String _VARIABLE_BOUNDARY = "(?<![\\w.?])";
 
 	private static final Pattern _assetObjectPattern = Pattern.compile(
 		"[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*(?:\\(\\))?)*\\.getAssetObject\\(\\)");
+	private static final Pattern _emptyAssignmentPattern = Pattern.compile(
+		"(?m)^[ \\t]*<#(?:assign|global|local)\\s*/?>[ \\t]*\\r?\\n|" +
+			"<#(?:assign|global|local)\\s*/?>");
+	private static final Pattern _serviceVariablePattern = Pattern.compile(
+		StringBundler.concat(
+			_BOUNDARY,
+			"(?:(\\w+)\\s*=\\s*)?(?:serviceLocator\\.findService\\(\\s*[\"']",
+			"([^\"']*)[\"']\\s*\\)|staticUtil\\[\\s*[\"']([^\"']*)Util",
+			"[\"']\\s*\\])"));
 	private static final Pattern _variablePattern = Pattern.compile(
 		"(\\w+)\\s*=\\s*[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*(?:\\(\\))?)*" +
 			"\\.getAssetObject\\(\\)");
 
-	private final Map<String, JSONObject> _jsonObjects = new HashMap<>();
+	private final JSONObject _modelsJSONObject;
 	private final Set<String> _objectEntryMethodNames = new LinkedHashSet<>();
+	private final JSONObject _servicesJSONObject;
 
 }

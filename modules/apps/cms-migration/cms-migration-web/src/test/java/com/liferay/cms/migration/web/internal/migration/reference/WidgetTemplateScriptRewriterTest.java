@@ -112,13 +112,104 @@ public class WidgetTemplateScriptRewriterTest {
 		_assertRewrite(
 			JournalArticle.class.getName(),
 			StringBundler.concat(
-				serviceScript, "<#list entries as curEntry><#assign ",
-				"objectEntry = curEntry.getAssetRenderer().getAssetObject() />",
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
 				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
 			StringBundler.concat(
 				serviceScript, "<#list entries as curEntry><#assign article = ",
 				"journalArticleLocalService.fetchLatestArticle(curEntry.",
 				"getClassPK()) />${article.getTitle(locale)}</#list>"));
+	}
+
+	@Test
+	public void testRewriteWithServiceLocatorAndInlineCall() {
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign article = ",
+				"serviceLocator.findService(\"com.liferay.journal.service.",
+				"JournalArticleLocalService\").fetchLatestArticle(curEntry.",
+				"classPK) />${article.getTitle(locale)}</#list>"));
+	}
+
+	@Test
+	public void testRewriteWithServiceLocatorAndRemainingCall() {
+		String serviceScript = StringBundler.concat(
+			"<#assign journalArticleLocalService = ",
+			"serviceLocator.findService(\"com.liferay.journal.service.",
+			"JournalArticleLocalService\") />");
+
+		WidgetTemplateScriptRewriter.Result result =
+			_widgetTemplateScriptRewriter.rewrite(
+				JournalArticle.class.getName(),
+				StringBundler.concat(
+					serviceScript, "<#list entries as curEntry><#assign ",
+					"article = journalArticleLocalService.fetchLatestArticle(",
+					"curEntry.getClassPK()) />",
+					"${journalArticleLocalService.getArticlesCount(groupId)}",
+					"</#list>"));
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				serviceScript, "<#list entries as curEntry><#assign ",
+				"objectEntry = curEntry.getAssetRenderer().getAssetObject() />",
+				"${journalArticleLocalService.getArticlesCount(groupId)}",
+				"</#list>"),
+			result.getScript());
+		Assert.assertEquals(
+			SetUtil.fromArray("JournalArticleLocalService.getArticlesCount"),
+			result.getUnsupportedServiceCalls());
+	}
+
+	@Test
+	public void testRewriteWithServiceLocatorAndSeveralAssignments() {
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				"<#assign\n\tuserLocalService = serviceLocator.findService(",
+				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${userLocalService.getUsersCount()}</#list>"),
+			StringBundler.concat(
+				"<#assign\n\tjournalArticleLocalService = ",
+				"serviceLocator.findService(\"com.liferay.journal.service.",
+				"JournalArticleLocalService\")\n\tuserLocalService = ",
+				"serviceLocator.findService(",
+				"\"com.liferay.portal.kernel.service.UserLocalService\")\n/>",
+				"<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalService.fetchLatestArticle(curEntry.",
+				"getClassPK()) />${userLocalService.getUsersCount()}</#list>"));
+	}
+
+	@Test
+	public void testRewriteWithServiceLocatorAndUnrelatedVariable() {
+		String script = StringBundler.concat(
+			"<#list entries as curEntry><#assign article = ",
+			"articleFinder.fetchLatestArticle(curEntry.getClassPK()) />",
+			"</#list>");
+
+		WidgetTemplateScriptRewriter.Result result =
+			_widgetTemplateScriptRewriter.rewrite(
+				JournalArticle.class.getName(), script);
+
+		Assert.assertEquals(script, result.getScript());
+		Assert.assertEquals(
+			Collections.emptySet(), result.getUnsupportedServiceCalls());
+	}
+
+	@Test
+	public void testRewriteWithServiceLocatorAndUnusedService() {
+		String script = StringBundler.concat(
+			"<#assign journalArticleLocalService = ",
+			"serviceLocator.findService(\"com.liferay.journal.service.",
+			"JournalArticleLocalService\") />");
+
+		_assertRewrite(JournalArticle.class.getName(), script, script);
 	}
 
 	@Test
@@ -134,6 +225,49 @@ public class WidgetTemplateScriptRewriterTest {
 				"<#assign first = assetRenderer.getAssetObject() second = ",
 				"curEntry.getAssetRenderer().getAssetObject() />",
 				"${first.getUserName()}${second.getUserName()}"));
+	}
+
+	@Test
+	public void testRewriteWithStaticUtil() {
+		_assertRewrite(
+			JournalArticle.class.getName(),
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${objectEntry.getTitleValue(locale.toString())}</#list>"),
+			StringBundler.concat(
+				"<#assign journalArticleLocalServiceUtil = ",
+				"staticUtil[\"com.liferay.journal.service.",
+				"JournalArticleLocalServiceUtil\"] />",
+				"<#list entries as curEntry><#assign article = ",
+				"journalArticleLocalServiceUtil.fetchLatestArticle(curEntry.",
+				"getClassPK()) />${article.getTitle(locale)}</#list>"));
+	}
+
+	@Test
+	public void testRewriteWithStaticUtilAndInlineCall() {
+		WidgetTemplateScriptRewriter.Result result =
+			_widgetTemplateScriptRewriter.rewrite(
+				JournalArticle.class.getName(),
+				StringBundler.concat(
+					"<#list entries as curEntry><#assign article = ",
+					"staticUtil[\"com.liferay.journal.service.",
+					"JournalArticleLocalServiceUtil\"].getLatestArticle(",
+					"curEntry.classPK) />${staticUtil[\"com.liferay.journal.",
+					"service.JournalArticleLocalServiceUtil\"].",
+					"getArticlesCount(groupId)}</#list>"));
+
+		Assert.assertEquals(
+			StringBundler.concat(
+				"<#list entries as curEntry><#assign objectEntry = ",
+				"curEntry.getAssetRenderer().getAssetObject() />",
+				"${staticUtil[\"com.liferay.journal.service.",
+				"JournalArticleLocalServiceUtil\"].getArticlesCount(groupId)}",
+				"</#list>"),
+			result.getScript());
+		Assert.assertEquals(
+			SetUtil.fromArray("JournalArticleLocalService.getArticlesCount"),
+			result.getUnsupportedServiceCalls());
 	}
 
 	@Test
