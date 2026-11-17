@@ -18,6 +18,7 @@ import com.liferay.depot.model.DepotEntry;
 import com.liferay.depot.model.DepotEntryGroupRel;
 import com.liferay.depot.service.DepotEntryGroupRelLocalService;
 import com.liferay.depot.service.DepotEntryLocalService;
+import com.liferay.document.library.helper.DLURLHelper;
 import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.document.library.kernel.model.DLFileEntryType;
 import com.liferay.document.library.kernel.model.DLFileEntryTypeConstants;
@@ -414,6 +415,82 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 		FileEntry attachmentFileEntry = _getAttachmentFileEntry(fileEntry);
 
 		Assert.assertEquals(description, attachmentFileEntry.getDescription());
+	}
+
+	@Test
+	public void testExecuteWithFileEntryLinkedFromJournalArticleContent()
+		throws Exception {
+
+		FileEntry fileEntry = _addFileEntry(StringPool.BLANK);
+
+		DDMForm ddmForm = DDMFormTestUtil.createDDMForm();
+
+		ddmForm.addDDMFormField(
+			DDMFormTestUtil.createDDMFormField(
+				"content", "content", DDMFormFieldTypeConstants.RICH_TEXT,
+				"html", true, false, false));
+
+		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
+			_group.getGroupId(), JournalArticle.class.getName(), ddmForm);
+
+		String link = StringBundler.concat(
+			"/documents/", fileEntry.getGroupId(), "/", fileEntry.getFolderId(),
+			"/", fileEntry.getTitle(), "/", fileEntry.getUuid());
+
+		JournalArticle journalArticle =
+			JournalTestUtil.addArticleWithXMLContent(
+				_group.getGroupId(),
+				DDMStructureTestUtil.getSampleStructuredContent(
+					"content",
+					Collections.singletonList(
+						HashMapBuilder.put(
+							LocaleUtil.US,
+							StringBundler.concat(
+								"<p><a href=\"", link, "\">",
+								fileEntry.getTitle(), "</a></p>")
+						).build()),
+					LocaleUtil.toLanguageId(LocaleUtil.US)),
+				ddmStructure.getStructureKey(), null);
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), false);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		ObjectEntry fileObjectEntry = _getObjectEntry(fileEntry);
+
+		Assert.assertEquals(
+			1,
+			_objectEntryLocalService.getObjectEntriesCount(
+				_depotEntry.getGroupId(),
+				fileObjectEntry.getObjectDefinitionId()));
+
+		JSONObject jsonObject = JSONFactoryUtil.createJSONObject(
+			backgroundTaskResult.getStatusMessage());
+
+		JSONObject countsJSONObject = jsonObject.getJSONObject("counts");
+
+		Assert.assertEquals(1, countsJSONObject.getLong("file-entries"));
+
+		ObjectEntry objectEntry = _getObjectEntry(journalArticle);
+
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		Map<String, String> contentMap = (Map<String, String>)values.get(
+			"content_i18n");
+
+		String content = contentMap.get(LocaleUtil.toLanguageId(LocaleUtil.US));
+
+		FileEntry attachmentFileEntry = _getAttachmentFileEntry(fileEntry);
+
+		Assert.assertTrue(
+			content,
+			content.contains(
+				_dlURLHelper.getPreviewURL(
+					attachmentFileEntry, attachmentFileEntry.getFileVersion(),
+					null, StringPool.BLANK, false, false)));
+
+		Assert.assertFalse(content, content.contains(link));
 	}
 
 	@Test
@@ -4120,6 +4197,9 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 
 	@Inject
 	private DLFileEntryTypeLocalService _dlFileEntryTypeLocalService;
+
+	@Inject
+	private DLURLHelper _dlURLHelper;
 
 	@Inject
 	private FragmentEntryLinkLocalService _fragmentEntryLinkLocalService;
