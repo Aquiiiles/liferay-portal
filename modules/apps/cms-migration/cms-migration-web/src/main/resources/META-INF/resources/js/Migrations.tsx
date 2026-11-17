@@ -5,7 +5,6 @@
 
 import ClayLabel, {LabelDisplayType} from '@clayui/label';
 import ClayLayout from '@clayui/layout';
-import ClayLink from '@clayui/link';
 import ClayPanel from '@clayui/panel';
 import ClayProgressBar from '@clayui/progress-bar';
 import {sub} from 'frontend-js-web';
@@ -16,7 +15,6 @@ export interface IMigration {
 	completed: boolean;
 	counts: {label: string; value: number}[];
 	createDate: string;
-	deleteURL?: string;
 	errors: string[];
 	inProgress: boolean;
 	itemTitle?: string;
@@ -77,7 +75,6 @@ function Migration({migration}: {migration: IMigration}) {
 		completed,
 		counts,
 		createDate,
-		deleteURL,
 		errors,
 		inProgress,
 		itemTitle,
@@ -107,18 +104,6 @@ function Migration({migration}: {migration: IMigration}) {
 						{statusLabel}
 					</ClayLabel>
 				</ClayLayout.ContentCol>
-
-				{completed && (
-					<ClayLayout.ContentCol>
-						<ClayLink
-							button={{small: true}}
-							displayType="secondary"
-							href={deleteURL}
-						>
-							{Liferay.Language.get('delete')}
-						</ClayLink>
-					</ClayLayout.ContentCol>
-				)}
 			</ClayLayout.ContentRow>
 
 			{inProgress && (
