@@ -69,7 +69,7 @@ public class WidgetTemplateScriptRewriter {
 
 			String from = replacementJSONObject.getString("from");
 
-			if (from.contains(_PLACEHOLDER)) {
+			if (from.contains(_PLACEHOLDER_ENTRY)) {
 				continue;
 			}
 
@@ -88,16 +88,16 @@ public class WidgetTemplateScriptRewriter {
 
 				String from = replacementJSONObject.getString("from");
 
-				if (!from.contains(_PLACEHOLDER)) {
+				if (!from.contains(_PLACEHOLDER_ENTRY)) {
 					continue;
 				}
 
-				from = StringUtil.replace(from, _PLACEHOLDER, expression);
+				from = StringUtil.replace(from, _PLACEHOLDER_ENTRY, expression);
 
 				String to = Matcher.quoteReplacement(
 					StringUtil.replace(
-						replacementJSONObject.getString("to"), _PLACEHOLDER,
-						expression));
+						replacementJSONObject.getString("to"),
+						_PLACEHOLDER_ENTRY, expression));
 
 				script = script.replaceAll(_BOUNDARY + Pattern.quote(from), to);
 
@@ -270,7 +270,7 @@ public class WidgetTemplateScriptRewriter {
 
 	private boolean _hasVariable(String script, String variableName) {
 		Pattern pattern = Pattern.compile(
-			_VARIABLE_BOUNDARY + Pattern.quote(variableName) + "(?!\\w)");
+			_BOUNDARY_VARIABLE + Pattern.quote(variableName) + "(?!\\w)");
 
 		Matcher matcher = pattern.matcher(script);
 
@@ -326,7 +326,7 @@ public class WidgetTemplateScriptRewriter {
 		StringBundler sb = new StringBundler();
 
 		Pattern pattern = Pattern.compile(
-			_VARIABLE_BOUNDARY + Pattern.quote(variableName) + "(?!\\w)");
+			_BOUNDARY_VARIABLE + Pattern.quote(variableName) + "(?!\\w)");
 
 		int start = 0;
 
@@ -529,11 +529,11 @@ public class WidgetTemplateScriptRewriter {
 
 	private static final String _BOUNDARY = "(?<![\\w.])";
 
-	private static final String _PLACEHOLDER = "[$ENTRY$]";
+	private static final String _BOUNDARY_VARIABLE = "(?<![\\w.?])";
 
 	private static final String _PLACEHOLDER_ASSET_ENTRY = "[$ASSET_ENTRY$]";
 
-	private static final String _VARIABLE_BOUNDARY = "(?<![\\w.?])";
+	private static final String _PLACEHOLDER_ENTRY = "[$ENTRY$]";
 
 	private static final Pattern _assetObjectPattern = Pattern.compile(
 		"[A-Za-z_]\\w*(?:\\.[A-Za-z_]\\w*(?:\\(\\))?)*\\.getAssetObject\\(\\)");
