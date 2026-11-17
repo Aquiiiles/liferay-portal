@@ -13,7 +13,6 @@ export const COMPLETED_MIGRATION: IMigration = {
 		{label: 'Folders', value: 11},
 	],
 	createDate: '11/11/26, 10:58',
-	deleteURL: 'http://localhost/delete',
 	errors: [],
 	inProgress: false,
 	name: 'Migration 1',

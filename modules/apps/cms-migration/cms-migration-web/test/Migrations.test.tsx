@@ -51,17 +51,12 @@ describe('Migrations', () => {
 		).toBeInTheDocument();
 	});
 
-	it('shows the counts and the delete link of a completed migration without errors or warnings', () => {
+	it('shows the counts of a completed migration without errors or warnings', () => {
 		render(
 			<Migrations
 				migrationIncomplete={false}
 				migrations={[COMPLETED_MIGRATION]}
 			/>
-		);
-
-		expect(screen.getByRole('link', {name: 'delete'})).toHaveAttribute(
-			'href',
-			'http://localhost/delete'
 		);
 
 		const [documents, folders] = screen.getAllByRole('listitem');
@@ -154,9 +149,6 @@ describe('Migrations', () => {
 			'aria-valuenow',
 			'40'
 		);
-		expect(
-			screen.queryByRole('link', {name: 'delete'})
-		).not.toBeInTheDocument();
 
 		expect(reload).not.toHaveBeenCalled();
 
@@ -185,9 +177,6 @@ describe('Migrations', () => {
 		).not.toBeInTheDocument();
 		expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
 		expect(screen.queryByRole('list')).not.toBeInTheDocument();
-		expect(
-			screen.queryByRole('link', {name: 'delete'})
-		).not.toBeInTheDocument();
 	});
 
 	it('renders the status label with its display type', () => {
