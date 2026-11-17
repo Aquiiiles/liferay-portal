@@ -6,6 +6,7 @@
 // eslint-disable-next-line @liferay/portal/no-cross-module-deep-import
 import {checkAccessibility} from '@liferay/layout-js-components-web/test/__lib__/index';
 import {act, render, screen, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 
 import '@testing-library/jest-dom';
@@ -18,6 +19,9 @@ import {
 } from './mocks/migrations';
 
 describe('Migrations', () => {
+	const languageGetImplementation = (
+		Liferay.Language.get as jest.Mock
+	).getMockImplementation();
 	const location = window.location;
 	const reload = jest.fn();
 
@@ -32,7 +36,13 @@ describe('Migrations', () => {
 	});
 
 	afterEach(() => {
+		(Liferay.Language.get as jest.Mock).mockImplementation(
+			languageGetImplementation
+		);
+
 		jest.useRealTimers();
+
+		window.sessionStorage.clear();
 
 		Object.defineProperty(window, 'location', {
 			configurable: true,
@@ -219,4 +229,185 @@ describe('Migrations', () => {
 			expect(screen.getByRole('listitem')).toHaveTextContent(text);
 		}
 	);
+
+	it('groups the completed migrations in a collapsed panel below the migrations not completed', () => {
+		render(
+			<Migrations
+				migrationIncomplete={true}
+				migrations={[
+					QUEUED_MIGRATION,
+					IN_PROGRESS_MIGRATION,
+					COMPLETED_MIGRATION,
+					{...COMPLETED_MIGRATION, backgroundTaskId: 4},
+				]}
+			/>
+		);
+
+		const [queued, inProgress, ...completed] = screen.getAllByRole(
+			'heading',
+			{level: 3}
+		);
+
+		expect(queued).toHaveTextContent('Migration 3');
+		expect(inProgress).toHaveTextContent('Migration 2');
+		expect(completed).toHaveLength(2);
+
+		expect(screen.getByRole('button', {name: 'x-y'})).toHaveAttribute(
+			'aria-expanded',
+			'false'
+		);
+		expect(
+			within(screen.getByRole('region')).getAllByRole('heading', {
+				name: 'Migration 1',
+			})
+		).toHaveLength(2);
+	});
+
+	it.each([
+		['en-US', 'completed (1,000)'],
+		['pt-BR', 'completed (1.000)'],
+	])(
+		'shows the number of completed migrations in the panel title with the %s grouping separator',
+		(languageId, name) => {
+			(Liferay.Language.get as jest.Mock).mockImplementation(
+				(key: string) => (key === 'x-y' ? '{0} ({1})' : key)
+			);
+			(
+				Liferay.ThemeDisplay.getBCP47LanguageId as jest.Mock
+			).mockReturnValueOnce(languageId);
+
+			render(
+				<Migrations
+					migrationIncomplete={true}
+					migrations={Array.from({length: 1000}, (_, index) => ({
+						...COMPLETED_MIGRATION,
+						backgroundTaskId: index,
+					}))}
+				/>
+			);
+
+			expect(screen.getByRole('button', {name})).toBeInTheDocument();
+		}
+	);
+
+	it('expands the completed migrations panel when every migration is completed', () => {
+		render(
+			<Migrations
+				migrationIncomplete={false}
+				migrations={[COMPLETED_MIGRATION]}
+			/>
+		);
+
+		expect(screen.getByRole('button', {name: 'x-y'})).toHaveAttribute(
+			'aria-expanded',
+			'true'
+		);
+	});
+
+	it('keeps the completed migrations panel expanded by the user after the page reloads', async () => {
+		const user = userEvent.setup({
+			advanceTimers: jest.advanceTimersByTime,
+		});
+
+		const migrations = [IN_PROGRESS_MIGRATION, COMPLETED_MIGRATION];
+
+		const {unmount} = render(
+			<Migrations migrationIncomplete={true} migrations={migrations} />
+		);
+
+		await user.click(screen.getByRole('button', {name: 'x-y'}));
+
+		unmount();
+
+		render(
+			<Migrations migrationIncomplete={true} migrations={migrations} />
+		);
+
+		expect(screen.getByRole('button', {name: 'x-y'})).toHaveAttribute(
+			'aria-expanded',
+			'true'
+		);
+	});
+
+	it('keeps the completed migrations panel collapsed by the user after the page reloads', async () => {
+		const user = userEvent.setup({
+			advanceTimers: jest.advanceTimersByTime,
+		});
+
+		const migrations = [COMPLETED_MIGRATION];
+
+		const {unmount} = render(
+			<Migrations migrationIncomplete={false} migrations={migrations} />
+		);
+
+		await user.click(screen.getByRole('button', {name: 'x-y'}));
+
+		unmount();
+
+		render(
+			<Migrations migrationIncomplete={false} migrations={migrations} />
+		);
+
+		expect(screen.getByRole('button', {name: 'x-y'})).toHaveAttribute(
+			'aria-expanded',
+			'false'
+		);
+	});
+
+	it('keeps the errors and warnings panels as the user left them after the page reloads', async () => {
+		const user = userEvent.setup({
+			advanceTimers: jest.advanceTimersByTime,
+		});
+
+		const migrations = [
+			{
+				...COMPLETED_MIGRATION,
+				errors: ['Error 1'],
+				warnings: ['Warning 1'],
+			},
+			{
+				...COMPLETED_MIGRATION,
+				backgroundTaskId: 4,
+				errors: ['Error 2'],
+				name: 'Migration 4',
+			},
+		];
+
+		const {unmount} = render(
+			<Migrations migrationIncomplete={false} migrations={migrations} />
+		);
+
+		await user.click(
+			screen.getAllByRole('button', {name: 'cms-migration-x-errors'})[0]
+		);
+
+		unmount();
+
+		render(
+			<Migrations migrationIncomplete={false} migrations={migrations} />
+		);
+
+		const errorsButtons = screen.getAllByRole('button', {
+			name: 'cms-migration-x-errors',
+		});
+
+		expect(errorsButtons[0]).toHaveAttribute('aria-expanded', 'true');
+		expect(errorsButtons[1]).toHaveAttribute('aria-expanded', 'false');
+		expect(
+			screen.getByRole('button', {name: 'cms-migration-x-warnings'})
+		).toHaveAttribute('aria-expanded', 'false');
+	});
+
+	it('does not show the completed migrations panel without completed migrations', () => {
+		render(
+			<Migrations
+				migrationIncomplete={true}
+				migrations={[QUEUED_MIGRATION]}
+			/>
+		);
+
+		expect(
+			screen.queryByRole('button', {name: 'x-y'})
+		).not.toBeInTheDocument();
+	});
 });
