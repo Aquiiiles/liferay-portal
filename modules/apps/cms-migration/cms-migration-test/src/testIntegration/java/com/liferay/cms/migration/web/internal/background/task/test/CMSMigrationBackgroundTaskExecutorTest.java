@@ -53,8 +53,10 @@ import com.liferay.layout.test.util.ContentLayoutTestUtil;
 import com.liferay.layout.test.util.LayoutTestUtil;
 import com.liferay.list.type.model.ListTypeEntry;
 import com.liferay.object.constants.ObjectFieldConstants;
+import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.constants.ObjectFolderConstants;
 import com.liferay.object.constants.ObjectRelationshipConstants;
+import com.liferay.object.field.setting.builder.ObjectFieldSettingBuilder;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectEntryFolder;
@@ -159,6 +161,7 @@ import jakarta.portlet.PortletPreferences;
 import java.io.Serializable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -845,6 +848,93 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 					suffix,
 				values.get("choice"));
 		}
+	}
+
+	@Test
+	public void testExecuteWithLongSmallImageURL() throws Exception {
+		String smallImageURL = RandomTestUtil.randomString(300);
+
+		JournalArticle journalArticle = _addJournalArticleWithSmallImageURL(
+			DDMStructureTestUtil.addStructure(
+				_group.getGroupId(), JournalArticle.class.getName(),
+				DDMFormTestUtil.createDDMForm("name")),
+			smallImageURL);
+
+		_assertSuccessful(_execute(_group.getGroupId(), false));
+
+		ObjectEntry objectEntry = _getObjectEntry(journalArticle);
+
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		Assert.assertEquals(smallImageURL, values.get("smallImageURL"));
+	}
+
+	@Test
+	public void testExecuteWithLongSmallImageURLAndTextObjectField()
+		throws Exception {
+
+		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
+			_group.getGroupId(), JournalArticle.class.getName(),
+			DDMFormTestUtil.createDDMForm("name"));
+
+		JournalArticle journalArticle = _addJournalArticleWithSmallImageURL(
+			ddmStructure, RandomTestUtil.randomString());
+
+		_assertSuccessful(_execute(_group.getGroupId(), false));
+
+		ObjectEntry objectEntry = _getObjectEntry(journalArticle);
+
+		_objectFieldLocalService.deleteObjectField(
+			_objectFieldLocalService.getObjectField(
+				objectEntry.getObjectDefinitionId(), "smallImageURL"));
+
+		_objectFieldLocalService.addCustomObjectField(
+			null, TestPropsValues.getUserId(), 0,
+			objectEntry.getObjectDefinitionId(),
+			ObjectFieldConstants.BUSINESS_TYPE_TEXT,
+			ObjectFieldConstants.DB_TYPE_STRING, null, false, false, null,
+			Collections.singletonMap(
+				LocaleUtil.getDefault(), RandomTestUtil.randomString()),
+			false, "smallImageURL", ObjectFieldConstants.READ_ONLY_FALSE, null,
+			false, false,
+			Arrays.asList(
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_MAX_LENGTH
+				).value(
+					"100"
+				).build(),
+				new ObjectFieldSettingBuilder(
+				).name(
+					ObjectFieldSettingConstants.NAME_SHOW_COUNTER
+				).value(
+					"true"
+				).build()));
+
+		journalArticle = _addJournalArticleWithSmallImageURL(
+			ddmStructure, RandomTestUtil.randomString(150));
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), false);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		String statusMessage = backgroundTaskResult.getStatusMessage();
+
+		Assert.assertTrue(
+			statusMessage,
+			statusMessage.contains(
+				StringBundler.concat(
+					"Skipped the small image URL of the entry ",
+					"CMS_MIGRATION_JOURNAL_ARTICLE_",
+					journalArticle.getResourcePrimKey(),
+					" because it exceeds 100 characters")));
+
+		objectEntry = _getObjectEntry(journalArticle);
+
+		Map<String, Serializable> values = objectEntry.getValues();
+
+		Assert.assertTrue(Validator.isNull(values.get("smallImageURL")));
 	}
 
 	@Test
@@ -3644,6 +3734,23 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID,
 			JournalArticleConstants.CLASS_NAME_ID_DEFAULT, document.asXML(),
 			ddmStructure.getStructureKey(), null, locale);
+	}
+
+	private JournalArticle _addJournalArticleWithSmallImageURL(
+			DDMStructure ddmStructure, String smallImageURL)
+		throws Exception {
+
+		JournalArticle journalArticle =
+			JournalTestUtil.addArticleWithXMLContent(
+				_group.getGroupId(),
+				DDMStructureTestUtil.getSampleStructuredContent(),
+				ddmStructure.getStructureKey(), null);
+
+		journalArticle.setSmallImageSource(
+			JournalArticleConstants.SMALL_IMAGE_SOURCE_URL);
+		journalArticle.setSmallImageURL(smallImageURL);
+
+		return _journalArticleLocalService.updateJournalArticle(journalArticle);
 	}
 
 	private String _addJournalContentPortlet(
