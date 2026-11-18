@@ -2818,6 +2818,107 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 	}
 
 	@Test
+	public void testExecuteWithRewritePagesAndDisplayPageTemplateWithFileLink()
+		throws Exception {
+
+		FileEntry fileEntry = _addFileEntry(StringPool.BLANK);
+
+		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
+			_group.getGroupId(), JournalArticle.class.getName());
+
+		LayoutPageTemplateEntry layoutPageTemplateEntry =
+			_layoutPageTemplateEntryLocalService.addLayoutPageTemplateEntry(
+				null, TestPropsValues.getUserId(), _group.getGroupId(), 0, null,
+				_portal.getClassNameId(JournalArticle.class),
+				ddmStructure.getStructureKey(), RandomTestUtil.randomString(),
+				LayoutPageTemplateEntryTypeConstants.DISPLAY_PAGE, 0,
+				WorkflowConstants.STATUS_APPROVED,
+				ServiceContextTestUtil.getServiceContext(_group.getGroupId()));
+
+		Layout layout = _layoutLocalService.getLayout(
+			layoutPageTemplateEntry.getPlid());
+
+		String uuidURL = StringBundler.concat(
+			"/documents/", fileEntry.getGroupId(), "/", fileEntry.getFolderId(),
+			"/", fileEntry.getTitle(), "/", fileEntry.getUuid());
+
+		ContentLayoutTestUtil.addFragmentEntryLinkToLayout(
+			JSONUtil.put(
+				"com.liferay.fragment.entry.processor.editable." +
+					"EditableFragmentEntryProcessor",
+				JSONUtil.put(
+					"element-text",
+					JSONUtil.put(
+						"defaultValue",
+						StringBundler.concat(
+							"<a href=\"", uuidURL, "\">", fileEntry.getTitle(),
+							"</a>")))
+			).toString(),
+			layout,
+			_segmentsExperienceLocalService.fetchDefaultSegmentsExperienceId(
+				layout.getPlid()));
+
+		BackgroundTaskResult backgroundTaskResult = _execute(
+			_group.getGroupId(), true);
+
+		_assertSuccessful(backgroundTaskResult);
+
+		ObjectEntry fileObjectEntry = _getObjectEntry(fileEntry);
+
+		Assert.assertEquals(
+			1,
+			_objectEntryLocalService.getObjectEntriesCount(
+				_depotEntry.getGroupId(),
+				fileObjectEntry.getObjectDefinitionId()));
+
+		JSONObject jsonObject = JSONFactoryUtil.createJSONObject(
+			backgroundTaskResult.getStatusMessage());
+
+		JSONObject countsJSONObject = jsonObject.getJSONObject("counts");
+
+		Assert.assertEquals(1, countsJSONObject.getLong("file-entries"));
+
+		LayoutPageTemplateEntry newLayoutPageTemplateEntry =
+			_layoutPageTemplateEntryLocalService.
+				getLayoutPageTemplateEntryByExternalReferenceCode(
+					"CMS_MIGRATION_LAYOUT_PAGE_TEMPLATE_ENTRY_" +
+						layoutPageTemplateEntry.getLayoutPageTemplateEntryId(),
+					_group.getGroupId());
+
+		List<FragmentEntryLink> fragmentEntryLinks =
+			_fragmentEntryLinkLocalService.getFragmentEntryLinksByPlid(
+				_group.getGroupId(), newLayoutPageTemplateEntry.getPlid());
+
+		Assert.assertEquals(
+			fragmentEntryLinks.toString(), 1, fragmentEntryLinks.size());
+
+		FragmentEntryLink fragmentEntryLink = fragmentEntryLinks.get(0);
+
+		JSONObject editableValuesJSONObject = JSONFactoryUtil.createJSONObject(
+			fragmentEntryLink.getEditableValues());
+
+		String defaultValue = editableValuesJSONObject.getJSONObject(
+			"com.liferay.fragment.entry.processor.editable." +
+				"EditableFragmentEntryProcessor"
+		).getJSONObject(
+			"element-text"
+		).getString(
+			"defaultValue"
+		);
+
+		FileEntry attachmentFileEntry = _getAttachmentFileEntry(fileEntry);
+
+		Assert.assertTrue(
+			defaultValue,
+			defaultValue.contains(
+				_dlURLHelper.getPreviewURL(
+					attachmentFileEntry, attachmentFileEntry.getFileVersion(),
+					null, StringPool.BLANK, false, false)));
+
+		Assert.assertFalse(defaultValue, defaultValue.contains(uuidURL));
+	}
+
+	@Test
 	public void testExecuteWithRewritePagesAndDisplayPageTemplateWithoutContent()
 		throws Exception {
 
