@@ -365,9 +365,10 @@ public class JournalArticleMigrator {
 					JournalArticleConstants.SMALL_IMAGE_SOURCE_URL) {
 
 			if (Validator.isNotNull(journalArticle.getSmallImageURL())) {
-				values.put(
-					CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE_URL,
-					journalArticle.getSmallImageURL());
+				_objectEntryWriter.putSmallImageURL(
+					cmsMigrationContext, externalReferenceCode,
+					objectDefinition, journalArticle.getSmallImageURL(),
+					values);
 			}
 		}
 		else if (smallImageSource ==

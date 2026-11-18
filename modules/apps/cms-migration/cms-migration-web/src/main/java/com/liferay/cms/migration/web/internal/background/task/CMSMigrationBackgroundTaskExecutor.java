@@ -281,8 +281,8 @@ public class CMSMigrationBackgroundTaskExecutor
 
 		ObjectEntryWriter objectEntryWriter = new ObjectEntryWriter(
 			_assetEntryLocalService, _language, _objectEntryLocalService,
-			_objectFieldLocalService, _portal, resourcePermissionMigrator,
-			_userLocalService);
+			_objectFieldLocalService, _objectFieldSettingLocalService, _portal,
+			resourcePermissionMigrator, _userLocalService);
 
 		BlogsEntryMigrator blogsEntryMigrator = new BlogsEntryMigrator(
 			attachmentCopier, _blogsEntryLocalService, htmlReferenceRewriter,
