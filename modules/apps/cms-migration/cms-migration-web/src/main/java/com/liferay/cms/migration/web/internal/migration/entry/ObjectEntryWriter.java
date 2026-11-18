@@ -18,13 +18,17 @@ import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
 import com.liferay.object.model.ObjectFieldSetting;
 import com.liferay.object.model.ObjectRelationship;
+import com.liferay.object.search.StrictObjectReindexThreadLocal;
 import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
 import com.liferay.object.service.ObjectFieldSettingLocalService;
+import com.liferay.petra.lang.SafeCloseable;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.User;
+import com.liferay.portal.kernel.search.Indexer;
+import com.liferay.portal.kernel.search.IndexerRegistryUtil;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -144,6 +148,10 @@ public class ObjectEntryWriter {
 			serviceContext.setAssetCategoryIds(assetEntry.getCategoryIds());
 			serviceContext.setAssetPriority(assetEntry.getPriority());
 			serviceContext.setAssetTagNames(assetEntry.getTagNames());
+
+			if (assetEntry.getPublishDate() != null) {
+				values.putIfAbsent("displayDate", assetEntry.getPublishDate());
+			}
 		}
 
 		if (MapUtil.isNotEmpty(friendlyURLMap)) {
@@ -195,7 +203,11 @@ public class ObjectEntryWriter {
 			objectEntry.setModifiedDate(modifiedDate);
 		}
 
+		_updateAssetEntryDates(objectDefinition, objectEntry);
+
 		objectEntry = _objectEntryLocalService.updateObjectEntry(objectEntry);
+
+		_reindex(objectDefinition, objectEntry);
 
 		long groupId = cmsMigrationContext.getSourceGroupId();
 
@@ -407,6 +419,41 @@ public class ObjectEntryWriter {
 						(Map<String, Serializable>)entry.getValue()));
 			}
 		}
+	}
+
+	private void _reindex(
+			ObjectDefinition objectDefinition, ObjectEntry objectEntry)
+		throws PortalException {
+
+		if (!objectDefinition.isEnableIndexSearch()) {
+			return;
+		}
+
+		Indexer<ObjectEntry> indexer = IndexerRegistryUtil.getIndexer(
+			objectDefinition.getClassName());
+
+		try (SafeCloseable safeCloseable =
+				StrictObjectReindexThreadLocal.
+					setStrictObjectReindexWithSafeCloseable(true)) {
+
+			indexer.reindex(objectEntry);
+		}
+	}
+
+	private void _updateAssetEntryDates(
+		ObjectDefinition objectDefinition, ObjectEntry objectEntry) {
+
+		AssetEntry assetEntry = _assetEntryLocalService.fetchEntry(
+			objectDefinition.getClassName(), objectEntry.getObjectEntryId());
+
+		if (assetEntry == null) {
+			return;
+		}
+
+		assetEntry.setCreateDate(objectEntry.getCreateDate());
+		assetEntry.setModifiedDate(objectEntry.getModifiedDate());
+
+		_assetEntryLocalService.updateAssetEntry(assetEntry);
 	}
 
 	private final AssetEntryLocalService _assetEntryLocalService;

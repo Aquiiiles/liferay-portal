@@ -344,9 +344,13 @@ public class CMSMigrationManager {
 			return;
 		}
 
+		values.put("displayDate", objectEntry.getDisplayDate());
+
 		ServiceContext serviceContext =
 			(ServiceContext)cmsMigrationContext.getServiceContext(
 			).clone();
+
+		serviceContext.setModifiedDate(objectEntry.getModifiedDate());
 
 		ObjectEntryScopeMigrator.populateServiceContext(
 			_assetEntryLocalService,
