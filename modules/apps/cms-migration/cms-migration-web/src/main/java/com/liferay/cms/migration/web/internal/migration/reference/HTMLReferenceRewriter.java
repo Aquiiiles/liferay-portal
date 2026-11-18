@@ -264,7 +264,9 @@ public class HTMLReferenceRewriter {
 	private FileEntry _getAttachmentFileEntry(
 		CMSMigrationContext cmsMigrationContext, FileEntry fileEntry) {
 
-		if (fileEntry == null) {
+		if ((fileEntry == null) ||
+			(fileEntry.getGroupId() == cmsMigrationContext.getDepotGroupId())) {
+
 			return null;
 		}
 
