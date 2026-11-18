@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
+import ClayAlert from '@clayui/alert';
 import ClayButton, {ClayButtonWithIcon} from '@clayui/button';
 import ClayForm, {ClayCheckbox, ClayInput, ClaySelect} from '@clayui/form';
 import ClayIcon from '@clayui/icon';
@@ -17,6 +18,7 @@ interface IOption {
 
 interface IProps {
 	groups: IOption[];
+	migrationIncomplete: boolean;
 	portletNamespace: string;
 	spaces: IOption[];
 	startCMSMigrationURL: string;
@@ -54,6 +56,7 @@ const UncontrolledClayCheckbox = ClayCheckbox as unknown as React.ComponentType<
 
 export default function Configuration({
 	groups,
+	migrationIncomplete,
 	portletNamespace,
 	spaces,
 	startCMSMigrationURL,
@@ -204,8 +207,22 @@ export default function Configuration({
 					</ClayLayout.SheetSection>
 				</ClayTooltipProvider>
 
+				{migrationIncomplete && (
+					<ClayAlert
+						displayType="warning"
+						title={Liferay.Language.get('warning')}
+					>
+						{Liferay.Language.get(
+							'cms-migration-only-one-migration-can-run-at-a-time'
+						)}
+					</ClayAlert>
+				)}
+
 				<ClayLayout.SheetFooter>
-					<ClayButton disabled={submitting} type="submit">
+					<ClayButton
+						disabled={migrationIncomplete || submitting}
+						type="submit"
+					>
 						{Liferay.Language.get('cms-migration-start')}
 					</ClayButton>
 				</ClayLayout.SheetFooter>

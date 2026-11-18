@@ -8,7 +8,11 @@ import React from 'react';
 import Configuration from './Configuration';
 import Migrations, {IMigration} from './Migrations';
 
-interface IProps extends React.ComponentProps<typeof Configuration> {
+interface IProps
+	extends Omit<
+		React.ComponentProps<typeof Configuration>,
+		'migrationIncomplete'
+	> {
 	migrations: IMigration[];
 }
 
@@ -18,7 +22,12 @@ export default function CMSMigration({
 }: IProps) {
 	return (
 		<>
-			<Configuration {...configurationProps} />
+			<Configuration
+				{...configurationProps}
+				migrationIncomplete={migrations.some(
+					({completed}) => !completed
+				)}
+			/>
 
 			<Migrations migrations={migrations} />
 		</>

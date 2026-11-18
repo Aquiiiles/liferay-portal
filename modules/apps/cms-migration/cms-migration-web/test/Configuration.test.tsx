@@ -25,10 +25,14 @@ const SPACES = [
 	{label: 'Space 2', value: '20'},
 ];
 
-function renderConfiguration({spaces = SPACES} = {}) {
+function renderConfiguration({
+	migrationIncomplete = false,
+	spaces = SPACES,
+} = {}) {
 	return render(
 		<Configuration
 			groups={GROUPS}
+			migrationIncomplete={migrationIncomplete}
 			portletNamespace={PORTLET_NAMESPACE}
 			spaces={spaces}
 			startCMSMigrationURL="http://localhost/start"
