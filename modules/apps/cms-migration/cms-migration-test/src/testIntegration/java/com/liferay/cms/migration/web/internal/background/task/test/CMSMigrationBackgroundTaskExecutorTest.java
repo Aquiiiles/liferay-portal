@@ -433,7 +433,19 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
 			_group.getGroupId(), JournalArticle.class.getName(), ddmForm);
 
-		String link = StringBundler.concat(
+		String adaptiveMediaURL = StringBundler.concat(
+			"/o/adaptive-media/image/", fileEntry.getFileEntryId(),
+			"/Preview-1000x0/", fileEntry.getTitle());
+		String fileEntryIdAttribute =
+			"data-fileentryid=\"" + fileEntry.getFileEntryId() + "\"";
+
+		String friendlyURL = _dlURLHelper.getPreviewURL(
+			fileEntry, fileEntry.getFileVersion(), null, StringPool.BLANK,
+			false, false);
+
+		Assert.assertTrue(friendlyURL, friendlyURL.startsWith("/documents/d/"));
+
+		String uuidURL = StringBundler.concat(
 			"/documents/", fileEntry.getGroupId(), "/", fileEntry.getFolderId(),
 			"/", fileEntry.getTitle(), "/", fileEntry.getUuid());
 
@@ -446,8 +458,11 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 						HashMapBuilder.put(
 							LocaleUtil.US,
 							StringBundler.concat(
-								"<p><a href=\"", link, "\">",
-								fileEntry.getTitle(), "</a></p>")
+								"<p><a href=\"", uuidURL, "\">",
+								fileEntry.getTitle(), "</a><a href=\"",
+								friendlyURL, "\">", fileEntry.getTitle(),
+								"</a><img ", fileEntryIdAttribute, " src=\"",
+								adaptiveMediaURL, "\" /></p>")
 						).build()),
 					LocaleUtil.toLanguageId(LocaleUtil.US)),
 				ddmStructure.getStructureKey(), null);
@@ -483,14 +498,23 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 
 		FileEntry attachmentFileEntry = _getAttachmentFileEntry(fileEntry);
 
-		Assert.assertTrue(
-			content,
-			content.contains(
+		Assert.assertEquals(
+			content, 3,
+			StringUtil.count(
+				content,
 				_dlURLHelper.getPreviewURL(
 					attachmentFileEntry, attachmentFileEntry.getFileVersion(),
 					null, StringPool.BLANK, false, false)));
+		Assert.assertTrue(
+			content,
+			content.contains(
+				"data-fileentryid=\"" + attachmentFileEntry.getFileEntryId() +
+					"\""));
 
-		Assert.assertFalse(content, content.contains(link));
+		Assert.assertFalse(content, content.contains(adaptiveMediaURL));
+		Assert.assertFalse(content, content.contains(fileEntryIdAttribute));
+		Assert.assertFalse(content, content.contains(friendlyURL));
+		Assert.assertFalse(content, content.contains(uuidURL));
 	}
 
 	@Test
