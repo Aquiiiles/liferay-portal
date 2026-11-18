@@ -41,7 +41,7 @@ describe('Migrations', () => {
 	});
 
 	it('explains that no migrations have been run yet', () => {
-		render(<Migrations migrations={[]} />);
+		render(<Migrations migrationIncomplete={false} migrations={[]} />);
 
 		expect(
 			screen.getByRole('heading', {name: 'cms-migration-migrations'})
@@ -52,7 +52,12 @@ describe('Migrations', () => {
 	});
 
 	it('shows the counts and the delete link of a completed migration without errors or warnings', () => {
-		render(<Migrations migrations={[COMPLETED_MIGRATION]} />);
+		render(
+			<Migrations
+				migrationIncomplete={false}
+				migrations={[COMPLETED_MIGRATION]}
+			/>
+		);
 
 		expect(screen.getByRole('link', {name: 'delete'})).toHaveAttribute(
 			'href',
@@ -72,11 +77,27 @@ describe('Migrations', () => {
 		).not.toBeInTheDocument();
 	});
 
+	it('does not reload the page when no migration is incomplete', () => {
+		render(
+			<Migrations
+				migrationIncomplete={false}
+				migrations={[COMPLETED_MIGRATION]}
+			/>
+		);
+
+		act(() => {
+			jest.runAllTimers();
+		});
+
+		expect(reload).not.toHaveBeenCalled();
+	});
+
 	it('has no accessibility violations', async () => {
 		jest.useRealTimers();
 
 		const {container} = render(
 			<Migrations
+				migrationIncomplete={true}
 				migrations={[
 					{
 						...COMPLETED_MIGRATION,
@@ -94,6 +115,7 @@ describe('Migrations', () => {
 	it('lists the errors and the warnings of a completed migration', () => {
 		render(
 			<Migrations
+				migrationIncomplete={false}
 				migrations={[
 					{
 						...COMPLETED_MIGRATION,
@@ -118,7 +140,12 @@ describe('Migrations', () => {
 	});
 
 	it('shows the progress of a migration in progress and reloads the page', () => {
-		render(<Migrations migrations={[IN_PROGRESS_MIGRATION]} />);
+		render(
+			<Migrations
+				migrationIncomplete={true}
+				migrations={[IN_PROGRESS_MIGRATION]}
+			/>
+		);
 
 		expect(screen.getByText('In Progress')).toBeInTheDocument();
 		expect(screen.getByText('Web Content')).toBeInTheDocument();
@@ -141,7 +168,12 @@ describe('Migrations', () => {
 	});
 
 	it('shows only the name, the date, and the status of a queued migration', () => {
-		render(<Migrations migrations={[QUEUED_MIGRATION]} />);
+		render(
+			<Migrations
+				migrationIncomplete={true}
+				migrations={[QUEUED_MIGRATION]}
+			/>
+		);
 
 		expect(
 			screen.getByRole('heading', {name: 'Migration 3'})
@@ -156,17 +188,12 @@ describe('Migrations', () => {
 		expect(
 			screen.queryByRole('link', {name: 'delete'})
 		).not.toBeInTheDocument();
-
-		act(() => {
-			jest.runAllTimers();
-		});
-
-		expect(reload).not.toHaveBeenCalled();
 	});
 
 	it('renders the status label with its display type', () => {
 		render(
 			<Migrations
+				migrationIncomplete={true}
 				migrations={[
 					{...QUEUED_MIGRATION, statusDisplayType: 'warning'},
 				]}
@@ -190,6 +217,7 @@ describe('Migrations', () => {
 
 			render(
 				<Migrations
+					migrationIncomplete={false}
 					migrations={[
 						{
 							...COMPLETED_MIGRATION,

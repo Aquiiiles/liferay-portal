@@ -20,16 +20,19 @@ export default function CMSMigration({
 	migrations,
 	...configurationProps
 }: IProps) {
+	const migrationIncomplete = migrations.some(({completed}) => !completed);
+
 	return (
 		<>
 			<Configuration
 				{...configurationProps}
-				migrationIncomplete={migrations.some(
-					({completed}) => !completed
-				)}
+				migrationIncomplete={migrationIncomplete}
 			/>
 
-			<Migrations migrations={migrations} />
+			<Migrations
+				migrationIncomplete={migrationIncomplete}
+				migrations={migrations}
+			/>
 		</>
 	);
 }

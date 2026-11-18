@@ -29,14 +29,13 @@ export interface IMigration {
 }
 
 interface IProps {
+	migrationIncomplete: boolean;
 	migrations: IMigration[];
 }
 
-export default function Migrations({migrations}: IProps) {
-	const inProgress = migrations.some((migration) => migration.inProgress);
-
+export default function Migrations({migrationIncomplete, migrations}: IProps) {
 	useEffect(() => {
-		if (!inProgress) {
+		if (!migrationIncomplete) {
 			return;
 		}
 
@@ -45,7 +44,7 @@ export default function Migrations({migrations}: IProps) {
 		}, 5000);
 
 		return () => clearTimeout(timeout);
-	}, [inProgress]);
+	}, [migrationIncomplete]);
 
 	return (
 		<ClayLayout.Sheet>
