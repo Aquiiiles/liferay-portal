@@ -7,21 +7,27 @@ package com.liferay.cms.migration.web.internal.migration.entry;
 
 import com.liferay.asset.kernel.model.AssetEntry;
 import com.liferay.asset.kernel.service.AssetEntryLocalService;
+import com.liferay.cms.migration.web.internal.constants.CMSMigrationConstants;
 import com.liferay.cms.migration.web.internal.migration.CMSMigrationContext;
 import com.liferay.cms.migration.web.internal.migration.structure.CMSMigrationDDMFormFieldUtil;
 import com.liferay.dynamic.data.mapping.model.DDMFormField;
+import com.liferay.object.constants.ObjectFieldConstants;
+import com.liferay.object.constants.ObjectFieldSettingConstants;
 import com.liferay.object.model.ObjectDefinition;
 import com.liferay.object.model.ObjectEntry;
 import com.liferay.object.model.ObjectField;
+import com.liferay.object.model.ObjectFieldSetting;
 import com.liferay.object.model.ObjectRelationship;
 import com.liferay.object.service.ObjectEntryLocalService;
 import com.liferay.object.service.ObjectFieldLocalService;
+import com.liferay.object.service.ObjectFieldSettingLocalService;
 import com.liferay.petra.string.StringBundler;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.language.Language;
 import com.liferay.portal.kernel.model.User;
 import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.service.UserLocalService;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
@@ -50,17 +56,62 @@ public class ObjectEntryWriter {
 	public ObjectEntryWriter(
 		AssetEntryLocalService assetEntryLocalService, Language language,
 		ObjectEntryLocalService objectEntryLocalService,
-		ObjectFieldLocalService objectFieldLocalService, Portal portal,
-		ResourcePermissionMigrator resourcePermissionMigrator,
+		ObjectFieldLocalService objectFieldLocalService,
+		ObjectFieldSettingLocalService objectFieldSettingLocalService,
+		Portal portal, ResourcePermissionMigrator resourcePermissionMigrator,
 		UserLocalService userLocalService) {
 
 		_assetEntryLocalService = assetEntryLocalService;
 		_language = language;
 		_objectEntryLocalService = objectEntryLocalService;
 		_objectFieldLocalService = objectFieldLocalService;
+		_objectFieldSettingLocalService = objectFieldSettingLocalService;
 		_portal = portal;
 		_resourcePermissionMigrator = resourcePermissionMigrator;
 		_userLocalService = userLocalService;
+	}
+
+	public void putSmallImageURL(
+		CMSMigrationContext cmsMigrationContext, String externalReferenceCode,
+		ObjectDefinition objectDefinition, String smallImageURL,
+		Map<String, Serializable> values) {
+
+		ObjectField objectField = _objectFieldLocalService.fetchObjectField(
+			objectDefinition.getObjectDefinitionId(),
+			CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE_URL);
+
+		if ((objectField != null) &&
+			objectField.compareBusinessType(
+				ObjectFieldConstants.BUSINESS_TYPE_TEXT)) {
+
+			ObjectFieldSetting objectFieldSetting =
+				_objectFieldSettingLocalService.fetchObjectFieldSetting(
+					objectField.getObjectFieldId(),
+					ObjectFieldSettingConstants.NAME_MAX_LENGTH);
+
+			int maxLength = 280;
+
+			if (objectFieldSetting != null) {
+				maxLength = GetterUtil.getInteger(
+					objectFieldSetting.getValue());
+			}
+
+			if (smallImageURL.length() > maxLength) {
+				cmsMigrationContext.getCMSMigrationReport(
+				).addWarning(
+					StringBundler.concat(
+						"Skipped the small image URL of the entry ",
+						externalReferenceCode, " because it exceeds ",
+						maxLength, " characters")
+				);
+
+				return;
+			}
+		}
+
+		values.put(
+			CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE_URL,
+			smallImageURL);
 	}
 
 	public ObjectEntry write(
@@ -362,6 +413,8 @@ public class ObjectEntryWriter {
 	private final Language _language;
 	private final ObjectEntryLocalService _objectEntryLocalService;
 	private final ObjectFieldLocalService _objectFieldLocalService;
+	private final ObjectFieldSettingLocalService
+		_objectFieldSettingLocalService;
 	private final Portal _portal;
 	private final ResourcePermissionMigrator _resourcePermissionMigrator;
 	private final UserLocalService _userLocalService;

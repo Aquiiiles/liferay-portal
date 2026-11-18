@@ -991,7 +991,7 @@ public class ObjectDefinitionMigrator {
 				_getLabelMap("small-image"),
 				CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE),
 			_createObjectField(
-				ObjectFieldConstants.BUSINESS_TYPE_TEXT,
+				ObjectFieldConstants.BUSINESS_TYPE_LONG_TEXT,
 				_getLabelMap("small-image-url"), false,
 				CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE_URL,
 				false));

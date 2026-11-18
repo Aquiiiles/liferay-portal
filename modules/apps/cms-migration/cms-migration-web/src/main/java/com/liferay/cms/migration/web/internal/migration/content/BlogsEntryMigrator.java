@@ -145,9 +145,9 @@ public class BlogsEntryMigrator {
 					smallImageFileEntryId);
 			}
 			else if (Validator.isNotNull(blogsEntry.getSmallImageURL())) {
-				values.put(
-					CMSMigrationConstants.OBJECT_FIELD_NAME_SMALL_IMAGE_URL,
-					blogsEntry.getSmallImageURL());
+				_objectEntryWriter.putSmallImageURL(
+					cmsMigrationContext, externalReferenceCode,
+					objectDefinition, blogsEntry.getSmallImageURL(), values);
 			}
 		}
 
