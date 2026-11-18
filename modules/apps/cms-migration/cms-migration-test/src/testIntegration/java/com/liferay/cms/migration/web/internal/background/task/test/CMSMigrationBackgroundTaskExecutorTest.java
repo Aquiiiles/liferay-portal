@@ -107,6 +107,11 @@ import com.liferay.portal.kernel.portlet.PortletIdCodec;
 import com.liferay.portal.kernel.portletdisplaytemplate.PortletDisplayTemplateManager;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.repository.model.Folder;
+import com.liferay.portal.kernel.search.Field;
+import com.liferay.portal.kernel.search.Hits;
+import com.liferay.portal.kernel.search.Indexer;
+import com.liferay.portal.kernel.search.IndexerRegistryUtil;
+import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.security.permission.ActionKeys;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
 import com.liferay.portal.kernel.security.permission.PermissionCheckerFactoryUtil;
@@ -146,6 +151,7 @@ import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.PortletKeys;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.util.WebKeys;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
@@ -687,6 +693,49 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			GetterUtil.getLong(values.get("image")));
 
 		Assert.assertEquals(description, attachmentFileEntry.getDescription());
+	}
+
+	@Test
+	public void testExecuteWithJournalArticleDates() throws Exception {
+		_testExecuteWithJournalArticleDates(
+			JournalTestUtil.addArticle(
+				_group.getGroupId(),
+				JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID));
+	}
+
+	@Test
+	public void testExecuteWithJournalArticleDatesAndContentLinks()
+		throws Exception {
+
+		DDMForm ddmForm = DDMFormTestUtil.createDDMForm();
+
+		ddmForm.addDDMFormField(
+			DDMFormTestUtil.createDDMFormField(
+				"content", "content", DDMFormFieldTypeConstants.RICH_TEXT,
+				"html", true, false, false));
+
+		DDMStructure ddmStructure = DDMStructureTestUtil.addStructure(
+			_group.getGroupId(), JournalArticle.class.getName(), ddmForm);
+
+		JournalArticle linkedJournalArticle = JournalTestUtil.addArticle(
+			_group.getGroupId(),
+			JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
+
+		_testExecuteWithJournalArticleDates(
+			JournalTestUtil.addArticleWithXMLContent(
+				_group.getGroupId(),
+				DDMStructureTestUtil.getSampleStructuredContent(
+					"content",
+					Collections.singletonList(
+						HashMapBuilder.put(
+							LocaleUtil.US,
+							StringBundler.concat(
+								"<p><a href=\"/w/",
+								linkedJournalArticle.getUrlTitle(), "\">",
+								RandomTestUtil.randomString(), "</a></p>")
+						).build()),
+					LocaleUtil.toLanguageId(LocaleUtil.US)),
+				ddmStructure.getStructureKey(), null));
 	}
 
 	@Test
@@ -4325,6 +4374,34 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 		return sb.toString();
 	}
 
+	private com.liferay.portal.kernel.search.Document _getDocument(
+			ObjectDefinition objectDefinition, ObjectEntry objectEntry)
+		throws Exception {
+
+		Indexer<ObjectEntry> indexer = IndexerRegistryUtil.getIndexer(
+			objectDefinition.getClassName());
+
+		SearchContext searchContext = new SearchContext();
+
+		searchContext.setCompanyId(objectEntry.getCompanyId());
+		searchContext.setGroupIds(new long[] {objectEntry.getGroupId()});
+		searchContext.setUserId(TestPropsValues.getUserId());
+
+		Hits hits = indexer.search(searchContext);
+
+		for (com.liferay.portal.kernel.search.Document document :
+				hits.getDocs()) {
+
+			if (GetterUtil.getLong(document.get(Field.ENTRY_CLASS_PK)) ==
+					objectEntry.getObjectEntryId()) {
+
+				return document;
+			}
+		}
+
+		return null;
+	}
+
 	private String _getDynamicElement(
 		String data, String name, String type,
 		String... nestedDynamicElements) {
@@ -4668,6 +4745,63 @@ public class CMSMigrationBackgroundTaskExecutorTest {
 			_group.getCompanyId(), className,
 			ResourceConstants.SCOPE_INDIVIDUAL, String.valueOf(classPK),
 			role.getRoleId(), actionIds);
+	}
+
+	private void _testExecuteWithJournalArticleDates(
+			JournalArticle journalArticle)
+		throws Exception {
+
+		long time = (System.currentTimeMillis() / Time.SECOND) * Time.SECOND;
+
+		Date createDate = new Date(time - (Time.YEAR * 3));
+
+		journalArticle.setCreateDate(createDate);
+
+		Date displayDate = new Date(time - (Time.YEAR * 2));
+
+		journalArticle.setDisplayDate(displayDate);
+
+		Date modifiedDate = new Date(time - Time.YEAR);
+
+		journalArticle.setModifiedDate(modifiedDate);
+
+		journalArticle = _journalArticleLocalService.updateJournalArticle(
+			journalArticle);
+
+		AssetEntry assetEntry = _assetEntryLocalService.getEntry(
+			JournalArticle.class.getName(),
+			journalArticle.getResourcePrimKey());
+
+		assetEntry.setPublishDate(displayDate);
+
+		_assetEntryLocalService.updateAssetEntry(assetEntry);
+
+		_assertSuccessful(_execute(_group.getGroupId(), false));
+
+		ObjectEntry objectEntry = _getObjectEntry(journalArticle);
+
+		Assert.assertEquals(createDate, objectEntry.getCreateDate());
+		Assert.assertEquals(displayDate, objectEntry.getDisplayDate());
+		Assert.assertEquals(modifiedDate, objectEntry.getModifiedDate());
+
+		ObjectDefinition objectDefinition =
+			_objectDefinitionLocalService.getObjectDefinition(
+				objectEntry.getObjectDefinitionId());
+
+		assetEntry = _assetEntryLocalService.getEntry(
+			objectDefinition.getClassName(), objectEntry.getObjectEntryId());
+
+		Assert.assertEquals(createDate, assetEntry.getCreateDate());
+		Assert.assertEquals(modifiedDate, assetEntry.getModifiedDate());
+		Assert.assertEquals(displayDate, assetEntry.getPublishDate());
+
+		com.liferay.portal.kernel.search.Document document = _getDocument(
+			objectDefinition, objectEntry);
+
+		Assert.assertEquals(createDate, document.getDate(Field.CREATE_DATE));
+		Assert.assertEquals(
+			modifiedDate, document.getDate(Field.MODIFIED_DATE));
+		Assert.assertEquals(displayDate, document.getDate(Field.PUBLISH_DATE));
 	}
 
 	private void _withNewDepotEntry(UnsafeRunnable<Exception> unsafeRunnable)
