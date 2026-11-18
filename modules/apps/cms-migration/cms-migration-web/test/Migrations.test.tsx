@@ -10,57 +10,12 @@ import React from 'react';
 
 import '@testing-library/jest-dom';
 
-import Migrations, {
-	IMigration,
-} from '../src/main/resources/META-INF/resources/js/Migrations';
-
-const COMPLETED_MIGRATION: IMigration = {
-	backgroundTaskId: 1,
-	completed: true,
-	counts: [
-		{label: 'Documents', value: 4},
-		{label: 'Folders', value: 11},
-	],
-	createDate: '11/11/26, 10:58',
-	deleteURL: 'http://localhost/delete',
-	errors: [],
-	inProgress: false,
-	name: 'Migration 1',
-	progress: 0,
-	statusDisplayType: 'success',
-	statusLabel: 'Successful',
-	warnings: [],
-};
-
-const IN_PROGRESS_MIGRATION: IMigration = {
-	backgroundTaskId: 2,
-	completed: false,
-	counts: [],
-	createDate: '10/11/26, 18:49',
-	errors: [],
-	inProgress: true,
-	itemTitle: 'Welcome',
-	name: 'Migration 2',
-	phaseLabel: 'Web Content',
-	progress: 40,
-	statusDisplayType: 'info',
-	statusLabel: 'In Progress',
-	warnings: [],
-};
-
-const QUEUED_MIGRATION: IMigration = {
-	backgroundTaskId: 3,
-	completed: false,
-	counts: [],
-	createDate: '10/11/26, 18:49',
-	errors: [],
-	inProgress: false,
-	name: 'Migration 3',
-	progress: 0,
-	statusDisplayType: 'info',
-	statusLabel: 'Queued',
-	warnings: [],
-};
+import Migrations from '../src/main/resources/META-INF/resources/js/Migrations';
+import {
+	COMPLETED_MIGRATION,
+	IN_PROGRESS_MIGRATION,
+	QUEUED_MIGRATION,
+} from './mocks/migrations';
 
 describe('Migrations', () => {
 	const location = window.location;
