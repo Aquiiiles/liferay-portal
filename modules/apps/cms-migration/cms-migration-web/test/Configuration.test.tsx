@@ -237,7 +237,30 @@ describe('Configuration', () => {
 		expect(button).toBeDisabled();
 	});
 
-	it('has no accessibility violations', async () => {
+	it('warns that only one migration runs at a time and disables the start button', () => {
+		renderConfiguration({migrationIncomplete: true});
+
+		expect(screen.getByRole('alert')).toHaveTextContent(
+			'cms-migration-only-one-migration-can-run-at-a-time'
+		);
+		expect(
+			screen.getByRole('button', {name: 'cms-migration-start'})
+		).toBeDisabled();
+	});
+
+	it('does not warn when no migration is incomplete', () => {
+		renderConfiguration();
+
+		expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+	});
+
+	it('has no accessibility violations with the warning', async () => {
+		const {container} = renderConfiguration({migrationIncomplete: true});
+
+		await checkAccessibility({bestPractices: true, context: container});
+	});
+
+	it('has no accessibility violations without the warning', async () => {
 		const {container} = renderConfiguration();
 
 		await checkAccessibility({bestPractices: true, context: container});
