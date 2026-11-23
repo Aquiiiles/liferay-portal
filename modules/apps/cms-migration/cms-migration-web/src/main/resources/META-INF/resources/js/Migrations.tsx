@@ -173,12 +173,12 @@ function Migration({
 
 			{completed && (
 				<>
-					<ul className="list-inline mt-2">
+					<ul
+						className="c-gapx-5 d-md-grid list-unstyled mt-2"
+						style={{gridTemplateColumns: 'repeat(2, max-content)'}}
+					>
 						{counts.map(({label, value}) => (
-							<li
-								className="list-inline-item text-nowrap"
-								key={label}
-							>
+							<li className="text-nowrap" key={label}>
 								<strong>{numberFormat.format(value)}</strong>
 
 								{` ${label}`}
