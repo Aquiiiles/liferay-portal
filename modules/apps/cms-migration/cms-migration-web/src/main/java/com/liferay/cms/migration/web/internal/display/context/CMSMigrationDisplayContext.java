@@ -14,6 +14,7 @@ import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.json.JSONUtil;
 import com.liferay.portal.kernel.model.Group;
 import com.liferay.portal.kernel.portlet.url.builder.PortletURLBuilder;
+import com.liferay.portal.kernel.portlet.url.builder.ResourceURLBuilder;
 import com.liferay.portal.kernel.service.GroupLocalService;
 import com.liferay.portal.kernel.theme.PortletDisplay;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
@@ -68,6 +69,15 @@ public class CMSMigrationDisplayContext {
 				_backgroundTaskManager,
 				PortalUtil.getLiferayPortletResponse(_renderResponse),
 				_themeDisplay.getURLCurrent(), _themeDisplay)
+		).put(
+			"migrationsURL",
+			ResourceURLBuilder.createResourceURL(
+				PortalUtil.getLiferayPortletResponse(_renderResponse)
+			).setRedirect(
+				_themeDisplay.getURLCurrent()
+			).setResourceID(
+				"/cms_migration/get_cms_migrations"
+			).buildString()
 		).put(
 			"portletNamespace", _renderResponse.getNamespace()
 		).put(
