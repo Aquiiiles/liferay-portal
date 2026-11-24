@@ -205,10 +205,7 @@ export default function Configuration({
 				</ClayTooltipProvider>
 
 				{migrationIncomplete && (
-					<ClayAlert
-						displayType="warning"
-						title={Liferay.Language.get('warning')}
-					>
+					<ClayAlert displayType="warning">
 						{Liferay.Language.get(
 							'cms-migration-only-one-migration-can-run-at-a-time'
 						)}
