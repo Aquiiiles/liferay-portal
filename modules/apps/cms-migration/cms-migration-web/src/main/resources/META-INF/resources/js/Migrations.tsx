@@ -27,10 +27,20 @@ export interface IMigration {
 	warnings: string[];
 }
 
+interface IMigrationProps {
+	migration: IMigration;
+	numberFormat: Intl.NumberFormat;
+}
+
 interface IProps {
 	migrationIncomplete: boolean;
 	migrations: IMigration[];
 }
+
+const Migration = React.memo(
+	MigrationRow,
+	({migration}) => migration.completed
+);
 
 export default function Migrations({migrationIncomplete, migrations}: IProps) {
 	const completedMigrations = migrations.filter(
@@ -106,13 +116,7 @@ export default function Migrations({migrationIncomplete, migrations}: IProps) {
 	);
 }
 
-function Migration({
-	migration,
-	numberFormat,
-}: {
-	migration: IMigration;
-	numberFormat: Intl.NumberFormat;
-}) {
+function MigrationRow({migration, numberFormat}: IMigrationProps) {
 	const {
 		backgroundTaskId,
 		completed,
