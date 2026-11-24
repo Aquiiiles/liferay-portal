@@ -260,7 +260,7 @@ describe('Configuration', () => {
 		renderConfiguration({migrationIncomplete: true});
 
 		expect(screen.getByRole('alert')).toHaveTextContent(
-			'cms-migration-only-one-migration-can-run-at-a-time'
+			/^cms-migration-only-one-migration-can-run-at-a-time$/
 		);
 		expect(
 			screen.getByRole('button', {name: 'cms-migration-start'})
