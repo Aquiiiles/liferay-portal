@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import {act, render, screen} from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 import React from 'react';
 
 import '@testing-library/jest-dom';
@@ -17,6 +17,7 @@ function renderCMSMigration(migrations: IMigration[]) {
 		<CMSMigration
 			groups={[{label: 'Site 1', value: '1'}]}
 			migrations={migrations}
+			migrationsURL="http://localhost/get"
 			portletNamespace="_portletNamespace_"
 			spaces={[]}
 			startCMSMigrationURL="http://localhost/start"
@@ -26,28 +27,6 @@ function renderCMSMigration(migrations: IMigration[]) {
 }
 
 describe('CMSMigration', () => {
-	const location = window.location;
-	const reload = jest.fn();
-
-	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.useFakeTimers();
-
-		Object.defineProperty(window, 'location', {
-			configurable: true,
-			value: {...location, reload},
-		});
-	});
-
-	afterEach(() => {
-		jest.useRealTimers();
-
-		Object.defineProperty(window, 'location', {
-			configurable: true,
-			value: location,
-		});
-	});
-
 	it('shows the configuration and the migrations', () => {
 		renderCMSMigration([]);
 
@@ -73,25 +52,5 @@ describe('CMSMigration', () => {
 		expect(
 			screen.getByRole('button', {name: 'cms-migration-start'})
 		).toBeEnabled();
-	});
-
-	it('reloads the page while a migration is not completed', () => {
-		renderCMSMigration([QUEUED_MIGRATION]);
-
-		act(() => {
-			jest.advanceTimersByTime(5000);
-		});
-
-		expect(reload).toHaveBeenCalledTimes(1);
-	});
-
-	it('does not reload the page when every migration is completed', () => {
-		renderCMSMigration([COMPLETED_MIGRATION]);
-
-		act(() => {
-			jest.runAllTimers();
-		});
-
-		expect(reload).not.toHaveBeenCalled();
 	});
 });

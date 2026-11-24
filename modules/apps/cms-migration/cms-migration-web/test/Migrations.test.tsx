@@ -5,7 +5,7 @@
 
 // eslint-disable-next-line @liferay/portal/no-cross-module-deep-import
 import {checkAccessibility} from '@liferay/layout-js-components-web/test/__lib__/index';
-import {act, render, screen, within} from '@testing-library/react';
+import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
@@ -22,17 +22,9 @@ describe('Migrations', () => {
 	const languageGetImplementation = (
 		Liferay.Language.get as jest.Mock
 	).getMockImplementation();
-	const location = window.location;
-	const reload = jest.fn();
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		jest.useFakeTimers();
-
-		Object.defineProperty(window, 'location', {
-			configurable: true,
-			value: {...location, reload},
-		});
 	});
 
 	afterEach(() => {
@@ -40,14 +32,7 @@ describe('Migrations', () => {
 			languageGetImplementation
 		);
 
-		jest.useRealTimers();
-
 		window.sessionStorage.clear();
-
-		Object.defineProperty(window, 'location', {
-			configurable: true,
-			value: location,
-		});
 	});
 
 	it('explains that no migrations have been run yet', () => {
@@ -82,24 +67,7 @@ describe('Migrations', () => {
 		).not.toBeInTheDocument();
 	});
 
-	it('does not reload the page when no migration is incomplete', () => {
-		render(
-			<Migrations
-				migrationIncomplete={false}
-				migrations={[COMPLETED_MIGRATION]}
-			/>
-		);
-
-		act(() => {
-			jest.runAllTimers();
-		});
-
-		expect(reload).not.toHaveBeenCalled();
-	});
-
 	it('has no accessibility violations', async () => {
-		jest.useRealTimers();
-
 		const {container} = render(
 			<Migrations
 				migrationIncomplete={true}
@@ -144,7 +112,7 @@ describe('Migrations', () => {
 		expect(within(warnings).getAllByRole('listitem')).toHaveLength(2);
 	});
 
-	it('shows the progress of a migration in progress and reloads the page', () => {
+	it('shows the progress of a migration in progress', () => {
 		render(
 			<Migrations
 				migrationIncomplete={true}
@@ -159,14 +127,6 @@ describe('Migrations', () => {
 			'aria-valuenow',
 			'40'
 		);
-
-		expect(reload).not.toHaveBeenCalled();
-
-		act(() => {
-			jest.advanceTimersByTime(5000);
-		});
-
-		expect(reload).toHaveBeenCalledTimes(1);
 	});
 
 	it('shows only the name, the date, and the status of a queued migration', () => {
@@ -305,9 +265,7 @@ describe('Migrations', () => {
 	});
 
 	it('keeps the completed migrations panel expanded by the user after the page reloads', async () => {
-		const user = userEvent.setup({
-			advanceTimers: jest.advanceTimersByTime,
-		});
+		const user = userEvent.setup();
 
 		const migrations = [IN_PROGRESS_MIGRATION, COMPLETED_MIGRATION];
 
@@ -330,9 +288,7 @@ describe('Migrations', () => {
 	});
 
 	it('keeps the completed migrations panel collapsed by the user after the page reloads', async () => {
-		const user = userEvent.setup({
-			advanceTimers: jest.advanceTimersByTime,
-		});
+		const user = userEvent.setup();
 
 		const migrations = [COMPLETED_MIGRATION];
 
@@ -355,9 +311,7 @@ describe('Migrations', () => {
 	});
 
 	it('keeps the errors and warnings panels as the user left them after the page reloads', async () => {
-		const user = userEvent.setup({
-			advanceTimers: jest.advanceTimersByTime,
-		});
+		const user = userEvent.setup();
 
 		const migrations = [
 			{

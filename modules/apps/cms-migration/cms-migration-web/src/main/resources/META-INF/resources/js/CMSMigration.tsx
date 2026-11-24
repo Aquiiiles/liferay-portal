@@ -7,6 +7,7 @@ import React from 'react';
 
 import Configuration from './Configuration';
 import Migrations, {IMigration} from './Migrations';
+import useCMSMigrations from './hooks/useCMSMigrations';
 
 interface IProps
 	extends Omit<
@@ -14,13 +15,18 @@ interface IProps
 		'migrationIncomplete'
 	> {
 	migrations: IMigration[];
+	migrationsURL: string;
 }
 
 export default function CMSMigration({
-	migrations,
+	migrations: initialMigrations,
+	migrationsURL,
 	...configurationProps
 }: IProps) {
-	const migrationIncomplete = migrations.some(({completed}) => !completed);
+	const {migrationIncomplete, migrations} = useCMSMigrations(
+		initialMigrations,
+		migrationsURL
+	);
 
 	return (
 		<>

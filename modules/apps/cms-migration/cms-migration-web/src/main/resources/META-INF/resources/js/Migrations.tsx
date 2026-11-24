@@ -9,7 +9,7 @@ import ClayPanel from '@clayui/panel';
 import ClayProgressBar from '@clayui/progress-bar';
 import {useSessionState} from 'frontend-js-components-web';
 import {sub} from 'frontend-js-web';
-import React, {useEffect, useMemo} from 'react';
+import React, {useMemo} from 'react';
 
 export interface IMigration {
 	backgroundTaskId: number;
@@ -45,18 +45,6 @@ export default function Migrations({migrationIncomplete, migrations}: IProps) {
 	const numberFormat = useMemo(() => {
 		return new Intl.NumberFormat(Liferay.ThemeDisplay.getBCP47LanguageId());
 	}, []);
-
-	useEffect(() => {
-		if (!migrationIncomplete) {
-			return;
-		}
-
-		const timeout = setTimeout(() => {
-			window.location.reload();
-		}, 5000);
-
-		return () => clearTimeout(timeout);
-	}, [migrationIncomplete]);
 
 	return (
 		<ClayLayout.Sheet>
