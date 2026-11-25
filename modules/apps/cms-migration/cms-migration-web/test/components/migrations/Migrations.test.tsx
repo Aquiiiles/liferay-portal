@@ -390,4 +390,109 @@ describe('Migrations', () => {
 			screen.queryByRole('button', {name: 'x-y'})
 		).not.toBeInTheDocument();
 	});
+
+	it('does not show the open logs button without errors or warnings, or before the migration is completed', () => {
+		render(
+			<Migrations
+				migrationIncomplete={true}
+				migrations={[
+					COMPLETED_MIGRATION,
+					{
+						...IN_PROGRESS_MIGRATION,
+						errors: ['Error 1'],
+						warnings: ['Warning 1'],
+					},
+				]}
+			/>
+		);
+
+		expect(
+			screen.queryByRole('button', {name: /open-logs/})
+		).not.toBeInTheDocument();
+	});
+
+	it.each([
+		['errors', {errors: ['Error 1']}],
+		['warnings', {warnings: ['Warning 1']}],
+	])(
+		'shows the open logs button of a completed migration with only %s',
+		(_type, messages) => {
+			render(
+				<Migrations
+					migrationIncomplete={false}
+					migrations={[{...COMPLETED_MIGRATION, ...messages}]}
+				/>
+			);
+
+			expect(
+				screen.getByRole('button', {name: 'open-logs Migration 1'})
+			).toBeInTheDocument();
+		}
+	);
+
+	describe('when the open logs button is clicked', () => {
+		let clickSpy: jest.SpyInstance;
+		let createObjectURL: jest.Mock<string, [Blob]>;
+
+		beforeEach(() => {
+			createObjectURL = jest.fn((_blob: Blob) => 'blob:csv');
+
+			Object.defineProperty(URL, 'createObjectURL', {
+				configurable: true,
+				value: createObjectURL,
+			});
+			Object.defineProperty(URL, 'revokeObjectURL', {
+				configurable: true,
+				value: jest.fn(),
+			});
+
+			clickSpy = jest
+				.spyOn(HTMLAnchorElement.prototype, 'click')
+				.mockImplementation(() => {});
+		});
+
+		afterEach(() => {
+			jest.restoreAllMocks();
+
+			Reflect.deleteProperty(URL, 'createObjectURL');
+			Reflect.deleteProperty(URL, 'revokeObjectURL');
+		});
+
+		it('downloads the logs of a completed migration as a CSV file', async () => {
+			const user = userEvent.setup();
+
+			render(
+				<Migrations
+					migrationIncomplete={false}
+					migrations={[
+						{
+							...COMPLETED_MIGRATION,
+							errors: ['Error 1'],
+							warnings: ['Warning 1'],
+						},
+					]}
+				/>
+			);
+
+			await user.click(
+				screen.getByRole('button', {name: 'open-logs Migration 1'})
+			);
+
+			expect(clickSpy).toHaveBeenCalledTimes(1);
+			expect(clickSpy.mock.instances[0]).toHaveAttribute(
+				'download',
+				expect.stringMatching(/^cms-migration-migration-1-/)
+			);
+
+			const csv = await new Promise((resolve) => {
+				const fileReader = new FileReader();
+
+				fileReader.onload = () => resolve(fileReader.result);
+
+				fileReader.readAsText(createObjectURL.mock.calls[0][0]);
+			});
+
+			expect(csv).toMatch(/error,Error 1\s+warning,Warning 1/);
+		});
+	});
 });
