@@ -10,7 +10,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 
 import CMSMigration from '../src/main/resources/META-INF/resources/js/CMSMigration';
-import {IMigration} from '../src/main/resources/META-INF/resources/js/Migrations';
+import {IMigration} from '../src/main/resources/META-INF/resources/js/types/Migration';
 import {
 	COMPLETED_MIGRATION,
 	IN_PROGRESS_MIGRATION,

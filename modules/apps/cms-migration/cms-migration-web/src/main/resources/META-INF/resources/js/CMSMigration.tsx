@@ -6,8 +6,9 @@
 import React from 'react';
 
 import Configuration from './components/configuration/Configuration';
-import Migrations, {IMigration} from './components/migrations/Migrations';
+import Migrations from './components/migrations/Migrations';
 import useCMSMigrations from './hooks/useCMSMigrations';
+import {IMigration} from './types/Migration';
 
 interface IProps
 	extends Omit<

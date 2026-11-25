@@ -7,7 +7,7 @@ import {useBrowserTabVisibility} from '@liferay/frontend-js-react-web';
 import {fetch} from 'frontend-js-web';
 import {useEffect, useState} from 'react';
 
-import {IMigration} from '../Migrations';
+import {IMigration} from '../types/Migration';
 
 const POLLING_INTERVAL = 5000;
 

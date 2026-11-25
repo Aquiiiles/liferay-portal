@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
-import ClayLabel, {LabelDisplayType} from '@clayui/label';
+import ClayLabel from '@clayui/label';
 import ClayLayout from '@clayui/layout';
 import ClayPanel from '@clayui/panel';
 import ClayProgressBar from '@clayui/progress-bar';
@@ -11,21 +11,7 @@ import {useSessionState} from 'frontend-js-components-web';
 import {sub} from 'frontend-js-web';
 import React, {useMemo} from 'react';
 
-export interface IMigration {
-	backgroundTaskId: number;
-	completed: boolean;
-	counts: {label: string; value: number}[];
-	createDate: string;
-	errors: string[];
-	inProgress: boolean;
-	itemTitle?: string;
-	name: string;
-	phaseLabel?: string;
-	progress: number;
-	statusDisplayType: LabelDisplayType;
-	statusLabel: string;
-	warnings: string[];
-}
+import {IMigration} from '../../types/Migration';
 
 interface IMigrationProps {
 	migration: IMigration;
