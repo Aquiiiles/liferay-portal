@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: LGPL-2.1-or-later OR LicenseRef-Liferay-DXP-EULA-2.0.0-2023-06
  */
 
+import ClayButton from '@clayui/button';
+import ClayIcon from '@clayui/icon';
 import ClayLabel from '@clayui/label';
 import ClayLayout from '@clayui/layout';
 import ClayPanel from '@clayui/panel';
@@ -12,6 +14,7 @@ import {sub} from 'frontend-js-web';
 import React, {useMemo} from 'react';
 
 import {IMigration} from '../../types/Migration';
+import {downloadCSV} from '../../utils/downloadCSV';
 
 interface IMigrationProps {
 	migration: IMigration;
@@ -133,6 +136,26 @@ function MigrationRow({migration, numberFormat}: IMigrationProps) {
 						{statusLabel}
 					</ClayLabel>
 				</ClayLayout.ContentCol>
+
+				{completed && (!!errors.length || !!warnings.length) && (
+					<ClayLayout.ContentCol>
+						<ClayButton
+							displayType="secondary"
+							onClick={() =>
+								downloadCSV({errors, name, warnings})
+							}
+							size="sm"
+						>
+							<span className="inline-item inline-item-before">
+								<ClayIcon symbol="document-default" />
+							</span>
+
+							{Liferay.Language.get('open-logs')}
+
+							<span className="sr-only">{` ${name}`}</span>
+						</ClayButton>
+					</ClayLayout.ContentCol>
+				)}
 			</ClayLayout.ContentRow>
 
 			{inProgress && (
