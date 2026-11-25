@@ -11,7 +11,7 @@ import React from 'react';
 
 import '@testing-library/jest-dom';
 
-import Configuration from '../src/main/resources/META-INF/resources/js/Configuration';
+import Configuration from '../../../src/main/resources/META-INF/resources/js/components/configuration/Configuration';
 
 const PORTLET_NAMESPACE = '_portletNamespace_';
 

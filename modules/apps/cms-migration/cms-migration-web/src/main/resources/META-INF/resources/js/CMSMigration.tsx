@@ -5,8 +5,8 @@
 
 import React from 'react';
 
-import Configuration from './Configuration';
-import Migrations, {IMigration} from './Migrations';
+import Configuration from './components/configuration/Configuration';
+import Migrations, {IMigration} from './components/migrations/Migrations';
 import useCMSMigrations from './hooks/useCMSMigrations';
 
 interface IProps

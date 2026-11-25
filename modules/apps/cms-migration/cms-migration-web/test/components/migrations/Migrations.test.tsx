@@ -11,12 +11,12 @@ import React from 'react';
 
 import '@testing-library/jest-dom';
 
-import Migrations from '../src/main/resources/META-INF/resources/js/Migrations';
+import Migrations from '../../../src/main/resources/META-INF/resources/js/components/migrations/Migrations';
 import {
 	COMPLETED_MIGRATION,
 	IN_PROGRESS_MIGRATION,
 	QUEUED_MIGRATION,
-} from './mocks/migrations';
+} from '../../mocks/migrations';
 
 describe('Migrations', () => {
 	const languageGetImplementation = (
