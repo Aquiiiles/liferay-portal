@@ -143,7 +143,7 @@ function Migration({
 
 	return (
 		<div className="border-bottom mb-3 pb-3">
-			<ClayLayout.ContentRow padded verticalAlign="center">
+			<ClayLayout.ContentRow noGutters="x" padded verticalAlign="center">
 				<ClayLayout.ContentCol expand>
 					<h3 className="h4">{name}</h3>
 
