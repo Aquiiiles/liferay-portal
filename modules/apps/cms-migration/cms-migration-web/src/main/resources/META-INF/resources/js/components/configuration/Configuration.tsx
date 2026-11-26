@@ -11,10 +11,8 @@ import ClayLayout from '@clayui/layout';
 import {ClayTooltipProvider} from '@clayui/tooltip';
 import React, {useState} from 'react';
 
-interface IOption {
-	label: string;
-	value: string;
-}
+import {IOption} from '../../types/Form';
+import {CONTENT_TYPES, CREATE_NEW_SPACE} from '../../utils/constants';
 
 interface IProps {
 	groups: IOption[];
@@ -24,43 +22,6 @@ interface IProps {
 	startCMSMigrationURL: string;
 	title: string;
 }
-
-const CONTENT_TYPES = [
-	{
-		label: Liferay.Language.get('web-content'),
-		name: 'migrateJournalArticles',
-	},
-	{label: Liferay.Language.get('blogs'), name: 'migrateBlogsEntries'},
-	{
-		label: Liferay.Language.get('documents-and-media'),
-		name: 'migrateFileEntries',
-	},
-	{
-		defaultChecked: false,
-		help: Liferay.Language.get('cms-migration-object-entries-help'),
-		label: Liferay.Language.get('objects'),
-		name: 'migrateObjectEntries',
-	},
-	{
-		help: Liferay.Language.get('cms-migration-rewrite-pages-help'),
-		label: Liferay.Language.get('cms-migration-rewrite-pages'),
-		name: 'rewritePages',
-	},
-	{
-		defaultChecked: false,
-		help: Liferay.Language.get('cms-migration-repeatable-fields-help'),
-		label: Liferay.Language.get('cms-migration-repeatable-fields'),
-		name: 'migrateRepeatableFields',
-	},
-	{
-		defaultChecked: false,
-		help: Liferay.Language.get('cms-migration-skip-unchanged-entries-help'),
-		label: Liferay.Language.get('cms-migration-skip-unchanged-entries'),
-		name: 'skipUnchangedEntries',
-	},
-];
-
-const CREATE_NEW_SPACE = '0';
 
 const UncontrolledClayCheckbox = ClayCheckbox as unknown as React.ComponentType<
 	Omit<React.ComponentProps<typeof ClayCheckbox>, 'checked'>
